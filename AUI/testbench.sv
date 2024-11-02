@@ -6,19 +6,45 @@ module aui_testbench;
     // Signals
     logic clk;
     logic rst_n;
-    wire [DATA_WIDTH-1:0]  tx_lane[NUMBER_LANES-1:0];
+    //wire flow_0;
+    //wire flow_1;
+    reg [3:0]hexa_output;
+    wire [DATA_WIDTH-1:0]  tx_lane_1;
+    wire [DATA_WIDTH-1:0]  tx_lane_2;
+    wire [DATA_WIDTH-1:0]  tx_lane_3;
+    wire [DATA_WIDTH-1:0]  tx_lane_4;
+    wire [DATA_WIDTH-1:0]  tx_lane_5;
+    wire [DATA_WIDTH-1:0]  tx_lane_6;
+    wire [DATA_WIDTH-1:0]  tx_lane_7;
+    wire [DATA_WIDTH-1:0]  tx_lane_8;
     logic [DATA_WIDTH-1:0]i_data;
 
     // Instantiate the AUI generator
-    aui_generator #(
+   /* aui_generator #(
         .DATA_WIDTH(DATA_WIDTH),
         .NUMBER_LANES(NUMBER_LANES)
     ) generator_aui (
         .clk(clk),
         .rst_n(rst_n),
         .i_data(i_data),
-        .tx_lane(tx_lane)
+        .tx_lane_1(tx_lane_1),
+        .tx_lane_2(tx_lane_2),
+        .tx_lane_3(tx_lane_3),
+        .tx_lane_4(tx_lane_4),
+        .tx_lane_5(tx_lane_5),
+        .tx_lane_6(tx_lane_6),
+        .tx_lane_7(tx_lane_7),
+        .tx_lane_8(tx_lane_8)
     );
+*/
+    alignment_marker_generator am_generator(
+        .clk(clk),
+        .rst_n(rst_n),
+        //.create_amg(create_amg),
+        //.flow_0(flow_0),
+        //.flow_1(flow_1)
+        .hexa_output(hexa_output)
+    ) ;
 
     // Clock generation
     initial begin
@@ -48,12 +74,4 @@ module aui_testbench;
     $dumpvars(0, aui_testbench); // Start dumping signals from the top module
 end
 
-    // Monitor and display lane values (optional for debugging)
-    /*always @(posedge clk) begin
-        if (rst_n) begin
-            for (int i = 0; i < NUMBER_LANES; i++) begin
-                $display("Time: %0t, tx_lane[%0d] = %h", $time, i, tx_lane[i]);
-            end
-        end
-    end*/
 endmodule
