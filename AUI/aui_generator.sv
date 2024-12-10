@@ -47,24 +47,69 @@ module aui_generator #(
 
     // Define individual localparams for each row
     logic [119:0] am [0:15];
+    logic [119:0]am_inverted[0:15];
+    reg option = 0;
+
+    function automatic logic [7:0] reverse_octet(input logic [7:0] octet);
+        logic [7:0] result;
+        for (int i = 0; i < 8; i++) begin
+            result[i] = octet[7-i];
+        end
+        return result;
+    endfunction
 
     initial begin
-        am[0] =  120'h000000000000000000000000000000;
-        am[1] =  120'h111111111111111111111111111111;
-        am[2] =  120'h222222222222222222222222222222;
-        am[3] =  120'h333333333333333333333333333333;
-        am[4] =  120'h444444444444444444444444444444;
-        am[5] =  120'h555555555555555555555555555555;
-        am[6] =  120'h666666666666666666666666666666;
-        am[7] =  120'h777777777777777777777777777777;
-        am[8] =  120'h888888888888888888888888888888;
-        am[9] =  120'h999999999999999999999999999999;
-        am[10] =  120'hAAAAAAAAAAAAAAAAAAAAAAAAaAAAAA;
-        am[11] =  120'hBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB;
-        am[12] =  120'hCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC;
-        am[13] =  120'hDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD;
-        am[14] =  120'hEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE;
-        am[15] =  120'hFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+        if(option == 1) begin
+            am[0] =  120'h000000000000000000000000000001;
+            am[1] =  120'h111111111111111111111111111111;
+            am[2] =  120'h222222222222222222222222222222;
+            am[3] =  120'h333333333333333333333333333333;
+            am[4] =  120'h444444444444444444444444444444;
+            am[5] =  120'h555555555555555555555555555555;
+            am[6] =  120'h666666666666666666666666666666;
+            am[7] =  120'h777777777777777777777777777777;
+            am[8] =  120'h888888888888888888888888888888;
+            am[9] =  120'h999999999999999999999999999999;
+            am[10] =  120'hAAAAAAAAAAAAAAAAAAAAAAAAaAAAAA;
+            am[11] =  120'hBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB;
+            am[12] =  120'hCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC;
+            am[13] =  120'hDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD;
+            am[14] =  120'hEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE;
+            am[15] =  120'hFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+        end else begin
+            am[0] =  120'h9A4A26B665B5D9D9FE8E0C260171F3;
+            am[1] =  120'h9A4A260465b5d967a52181985ade7e;
+            am[2] =  120'h9a4a264665b5d9fec10ca9013ef356;
+            am[3] =  120'h9a4a265a65b5d984797f2f7b8680d0;
+            am[4] =  120'h9a4a26e165b5d919d5ae0de62a51f2;
+            am[5] =  120'h9a4a26f265b5d94eedb02eb1124fd1;
+            am[6] =  120'h9a4a263d65b5d9eebd635e11429ca1;
+            am[7] =  120'h9a4a262265b5d9322989a4cdd6765b;
+            am[8] =  120'h9a4a266065b5d99f1e8c8a60e17375;
+            am[9] =  120'h9a4a266b65b5d9a28e3bc35d71c43c;
+            am[10] =  120'h9a4a26fa65b5d9046a1427fb95ebd8;
+            am[11] =  120'h9a4a266c65b5d971dd99c78e226638;
+            am[12] =  120'h9a4a261865b5d95b5d096aa4a2f695;
+            am[13] =  120'h9a4a261465b5d9ccce683c333197c3;
+            am[14] =  120'h9a4a26d065b5d9b13504594ecafba6;
+            am[15] =  120'h9a4a26b465b5d956594586a9a6ba79;
+
+            for (int i = 0; i < 16; i++) begin
+                am_inverted[i] = 0; // Inicializar a cero
+                for (int j = 0; j < 15; j++) begin // 15 octetos en 120 bits
+                    // Invertir los bits del octeto
+                    logic [7:0] reversed_octet = reverse_octet(am[i][(j*8)+:8]);
+                    // Colocar el octeto invertido en la posición opuesta
+                    am_inverted[i][(14-j)*8 +: 8] = reversed_octet;
+                end
+            end
+
+            for (int i = 0; i < 16; i++) begin
+                am[i] = am_inverted[i];
+                $display("am_flipped[%0d] = %h", i, am_inverted[i]);
+            end
+
+        end
         
         #100;
 
