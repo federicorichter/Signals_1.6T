@@ -1,14 +1,25 @@
 module aui_generator #(
     parameter BITS_BLOCK = 257,
     parameter MAX_BLOCKS_AM = 40,
-    parameter WORD_SIZE = 10
+    parameter WORD_SIZE = 10, 
+    parameter BLOCKS_REPETITION = 8192,
+    parameter LANE_WIDTH = 1360
 )(
     input logic clk,
     input logic rst,
     output logic [3:0] hexa_output,
     output logic [BITS_BLOCK-1:0] o_flow_0,
     output logic [BITS_BLOCK-1:0] o_flow_1,
-    output logic [(WORD_SIZE*4)-1:0] o_lane_0
+    output logic [LANE_WIDTH-1:0] o_lane_0,
+    output logic sync_lane_0,
+    output logic [LANE_WIDTH-1:0] o_lane_1,
+    output logic sync_lane_1,
+    output logic [LANE_WIDTH-1:0] o_lane_2,
+    output logic sync_lane_2,
+    output logic [LANE_WIDTH-1:0] o_lane_3,
+    output logic sync_lane_3,
+    output logic [LANE_WIDTH-1:0] o_lane_15,
+    output logic sync_lane_15
 );
 
     // Define individual localparams for each row
@@ -209,7 +220,7 @@ module aui_generator #(
 
     // Next-state logic
     always_comb begin
-        o_block_next = (o_block + 1) % MAX_BLOCKS_AM;
+        o_block_next = (o_block + 1) % BLOCKS_REPETITION;
         o_hexa_next = (o_hexa + 1) % MAX_BLOCKS_AM;
     end
 
@@ -226,6 +237,32 @@ module aui_generator #(
         //o_flow_0 = tx_scrambled_f0[(BITS_BLOCK * o_block) +: BITS_BLOCK];
         //o_flow_1 = tx_scrambled_f1[(BITS_BLOCK * o_block) +: BITS_BLOCK];
         //o_lane_0 = {message_codeword_a[5449]}
+        if(o_block == 0) begin
+            o_lane_0 = lane_0;
+            sync_lane_0 = 1;
+            o_lane_1 = lane_1;
+            sync_lane_1 = 1;
+            o_lane_2 = lane_2;
+            sync_lane_2 = 1;
+            o_lane_3 = lane_3;
+            sync_lane_3 = 1;
+            //o_lane_4 = lane_4;
+            o_lane_15 = lane_15;
+            sync_lane_15 = 1;
+        end 
+        else begin
+            o_lane_0 = {LANE_WIDTH{1'b1}};
+            sync_lane_0 = 0;
+            o_lane_1 = {LANE_WIDTH{1'b1}};
+            sync_lane_1 = 0;
+            o_lane_2 = {LANE_WIDTH{1'b1}};
+            sync_lane_2 = 0;
+            o_lane_3 = {LANE_WIDTH{1'b1}};
+            sync_lane_3 = 0;
+            o_lane_15 = {LANE_WIDTH{1'b1}};
+            sync_lane_15 = 0;
+        end
+        
     end
     
 
