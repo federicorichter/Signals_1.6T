@@ -164,11 +164,11 @@ module aui_generator #(
             assign lane_10[(40*k) + 39: 40*k + 30] = message_codeword_d[(544-(16*k)- 10)*10-1:(544-(16*k)- 10)*10-10];
 
             assign lane_11[(40*k) + 9: 40*k] = message_codeword_a[(544-(16*k)- 11)*10-1:(544-(16*k)- 11)*10-10];
-            assign lane_11[(40*k) + 19: 40*k + 10] = message_codeword_b[(544-(16*k)- 11)*10-1:(544-(16*k)- 10)*11-10];
-            assign lane_11[(40*k) + 29: 40*k + 20] = message_codeword_c[(544-(16*k)- 11)*10-1:(544-(16*k)- 10)*11-10];
-            assign lane_11[(40*k) + 39: 40*k + 30] = message_codeword_d[(544-(16*k)- 11)*10-1:(544-(16*k)- 10)*11-10];
+            assign lane_11[(40*k) + 19: 40*k + 10] = message_codeword_b[(544-(16*k)- 11)*10-1:(544-(16*k)- 11)*10-10];
+            assign lane_11[(40*k) + 29: 40*k + 20] = message_codeword_c[(544-(16*k)- 11)*10-1:(544-(16*k)- 11)*10-10];
+            assign lane_11[(40*k) + 39: 40*k + 30] = message_codeword_d[(544-(16*k)- 11)*10-1:(544-(16*k)- 11)*10-10];
 
-            assign lane_12[(40*k) + 9: 40*k] = message_codeword_a[(544-(16*k)- 10)*10-1:(544-(16*k)- 10)*10-10];
+            assign lane_12[(40*k) + 9: 40*k] = message_codeword_a[(544-(16*k)- 12)*10-1:(544-(16*k)- 12)*10-10];
             assign lane_12[(40*k) + 19: 40*k + 10] = message_codeword_b[(544-(16*k)- 12)*10-1:(544-(16*k)- 12)*10-10];
             assign lane_12[(40*k) + 29: 40*k + 20] = message_codeword_c[(544-(16*k)- 12)*10-1:(544-(16*k)- 12)*10-10];
             assign lane_12[(40*k) + 39: 40*k + 30] = message_codeword_d[(544-(16*k)- 12)*10-1:(544-(16*k)- 12)*10-10];
@@ -178,7 +178,7 @@ module aui_generator #(
             assign lane_13[(40*k) + 29: 40*k + 20] = message_codeword_c[(544-(16*k)- 13)*10-1:(544-(16*k)- 13)*10-10];
             assign lane_13[(40*k) + 39: 40*k + 30] = message_codeword_d[(544-(16*k)- 13)*10-1:(544-(16*k)- 13)*10-10];
 
-            assign lane_14[(40*k) + 9: 40*k] = message_codeword_a[(544-(16*k)- 10)*14-1:(544-(16*k)- 14)*10-10];
+            assign lane_14[(40*k) + 9: 40*k] = message_codeword_a[(544-(16*k)- 14)*10-1:(544-(16*k)- 14)*10-10];
             assign lane_14[(40*k) + 19: 40*k + 10] = message_codeword_b[(544-(16*k)- 14)*10-1:(544-(16*k)- 14)*10-10];
             assign lane_14[(40*k) + 29: 40*k + 20] = message_codeword_c[(544-(16*k)- 14)*10-1:(544-(16*k)- 14)*10-10];
             assign lane_14[(40*k) + 39: 40*k + 30] = message_codeword_d[(544-(16*k)- 14)*10-1:(544-(16*k)- 14)*10-10];
