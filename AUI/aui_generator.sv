@@ -10,6 +10,7 @@ module aui_generator #(
     output logic [3:0] hexa_output,
     output logic [BITS_BLOCK-1:0] o_flow_0,
     output logic [BITS_BLOCK-1:0] o_flow_1,
+
     output logic [LANE_WIDTH-1:0] o_lane_0,
     output logic sync_lane_0,
     output logic [LANE_WIDTH-1:0] o_lane_1,
@@ -18,6 +19,28 @@ module aui_generator #(
     output logic sync_lane_2,
     output logic [LANE_WIDTH-1:0] o_lane_3,
     output logic sync_lane_3,
+    output logic [LANE_WIDTH-1:0] o_lane_4,
+    output logic sync_lane_4,
+    output logic [LANE_WIDTH-1:0] o_lane_5,
+    output logic sync_lane_5,
+    output logic [LANE_WIDTH-1:0] o_lane_6,
+    output logic sync_lane_6,
+    output logic [LANE_WIDTH-1:0] o_lane_7,
+    output logic sync_lane_7,
+    output logic [LANE_WIDTH-1:0] o_lane_8,
+    output logic sync_lane_8,
+    output logic [LANE_WIDTH-1:0] o_lane_9,
+    output logic sync_lane_9,
+    output logic [LANE_WIDTH-1:0] o_lane_10,
+    output logic sync_lane_10,
+    output logic [LANE_WIDTH-1:0] o_lane_11,
+    output logic sync_lane_11,
+    output logic [LANE_WIDTH-1:0] o_lane_12,
+    output logic sync_lane_12,
+    output logic [LANE_WIDTH-1:0] o_lane_13,
+    output logic sync_lane_13,
+    output logic [LANE_WIDTH-1:0] o_lane_14,
+    output logic sync_lane_14,
     output logic [LANE_WIDTH-1:0] o_lane_15,
     output logic sync_lane_15
 );
@@ -246,7 +269,28 @@ module aui_generator #(
             sync_lane_2 = 1;
             o_lane_3 = lane_3;
             sync_lane_3 = 1;
-            //o_lane_4 = lane_4;
+            o_lane_4 = lane_4;
+            sync_lane_4 = 1;
+            o_lane_3 = lane_5;
+            sync_lane_5 = 1;
+            o_lane_3 = lane_6;
+            sync_lane_6 = 1;
+            o_lane_3 = lane_7;
+            sync_lane_7 = 1;
+            o_lane_3 = lane_8;
+            sync_lane_8 = 1;
+            o_lane_3 = lane_9;
+            sync_lane_9 = 1;
+            o_lane_3 = lane_10;
+            sync_lane_10 = 1;
+            o_lane_3 = lane_11;
+            sync_lane_11 = 1;
+            o_lane_3 = lane_12;
+            sync_lane_12 = 1;
+            o_lane_3 = lane_13;
+            sync_lane_13 = 1;
+            o_lane_3 = lane_14;
+            sync_lane_14 = 1;
             o_lane_15 = lane_15;
             sync_lane_15 = 1;
         end 
@@ -259,6 +303,28 @@ module aui_generator #(
             sync_lane_2 = 0;
             o_lane_3 = {LANE_WIDTH{1'b1}};
             sync_lane_3 = 0;
+            o_lane_4 = {LANE_WIDTH{1'b1}};
+            sync_lane_4 = 0;
+            o_lane_5 = {LANE_WIDTH{1'b1}};
+            sync_lane_5 = 0;
+            o_lane_6 = {LANE_WIDTH{1'b1}};
+            sync_lane_6 = 0;
+            o_lane_7 = {LANE_WIDTH{1'b1}};
+            sync_lane_7 = 0;
+            o_lane_8 = {LANE_WIDTH{1'b1}};
+            sync_lane_8 = 0;
+            o_lane_9 = {LANE_WIDTH{1'b1}};
+            sync_lane_9 = 0;
+            o_lane_10 = {LANE_WIDTH{1'b1}};
+            sync_lane_10 = 0;
+            o_lane_11 = {LANE_WIDTH{1'b1}};
+            sync_lane_11 = 0;
+            o_lane_12 = {LANE_WIDTH{1'b1}};
+            sync_lane_12 = 0;
+            o_lane_13 = {LANE_WIDTH{1'b1}};
+            sync_lane_13 = 0;
+            o_lane_14 = {LANE_WIDTH{1'b1}};
+            sync_lane_14 = 0;
             o_lane_15 = {LANE_WIDTH{1'b1}};
             sync_lane_15 = 0;
         end
