@@ -60,7 +60,7 @@ module aui_generator #(
 
     initial begin
         if(option == 1) begin
-            am[0] =  120'h000000000000000000000000000001;
+            am[0] =  120'h010000000000000000000000000001;
             am[1] =  120'h111111111111111111111111111111;
             am[2] =  120'h222222222222222222222222222222;
             am[3] =  120'h333333333333333333333333333333;
@@ -175,8 +175,8 @@ module aui_generator #(
         for(l = 0; l < 544; l++) begin //5439         5430
             assign message_codeword_a[((544-l)*10)-1:((544-l)*10)-10] = tx_scrambled_f0[(20*l+9):(20*l)];
             assign message_codeword_b[((544-l)*10)-1:((544-l)*10)-10] = tx_scrambled_f0[(20*l+19):(20*l + 10)];
-            assign message_codeword_c[((544-l)*10)-1:((544-l)*10)-10] = tx_scrambled_f0[(20*l+9):(20*l)];
-            assign message_codeword_d[((544-l)*10)-1:((544-l)*10)-10] = tx_scrambled_f0[(20*l+19):(20*l + 10)];
+            assign message_codeword_c[((544-l)*10)-1:((544-l)*10)-10] = tx_scrambled_f1[(20*l+9):(20*l)];
+            assign message_codeword_d[((544-l)*10)-1:((544-l)*10)-10] = tx_scrambled_f1[(20*l+19):(20*l + 10)];
         end
 
         //Reed-Solomon
@@ -316,25 +316,25 @@ module aui_generator #(
             sync_lane_3 = 1;
             o_lane_4 = lane_4;
             sync_lane_4 = 1;
-            o_lane_3 = lane_5;
+            o_lane_5 = lane_5;
             sync_lane_5 = 1;
-            o_lane_3 = lane_6;
+            o_lane_6 = lane_6;
             sync_lane_6 = 1;
-            o_lane_3 = lane_7;
+            o_lane_7 = lane_7;
             sync_lane_7 = 1;
-            o_lane_3 = lane_8;
+            o_lane_8 = lane_8;
             sync_lane_8 = 1;
-            o_lane_3 = lane_9;
+            o_lane_9 = lane_9;
             sync_lane_9 = 1;
-            o_lane_3 = lane_10;
+            o_lane_10 = lane_10;
             sync_lane_10 = 1;
-            o_lane_3 = lane_11;
+            o_lane_11 = lane_11;
             sync_lane_11 = 1;
-            o_lane_3 = lane_12;
+            o_lane_12 = lane_12;
             sync_lane_12 = 1;
-            o_lane_3 = lane_13;
+            o_lane_13 = lane_13;
             sync_lane_13 = 1;
-            o_lane_3 = lane_14;
+            o_lane_14 = lane_14;
             sync_lane_14 = 1;
             o_lane_15 = lane_15;
             sync_lane_15 = 1;
