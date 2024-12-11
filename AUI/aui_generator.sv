@@ -98,7 +98,7 @@ module aui_generator #(
                 am_inverted[i] = 0; // Inicializar a cero
                 for (int j = 0; j < 15; j++) begin // 15 octetos en 120 bits
                     // Invertir los bits del octeto
-                    logic [7:0] reversed_octet = reverse_octet(am[i][(j*8)+:8]);
+                    logic [7:0] reversed_octet = am[i][(j*8)+:8]; //reverse_octet(am[i][(j*8)+:8]);
                     // Colocar el octeto invertido en la posición opuesta
                     am_inverted[i][(14-j)*8 +: 8] = reversed_octet;
                 end
@@ -170,7 +170,7 @@ module aui_generator #(
         assign am_mapped_f1[1027:1025] = 3'b111;
 
         assign tx_scrambled_f0[(MAX_BLOCKS_AM*BITS_BLOCK)-1:0] = {{9252{1'd1}}, am_mapped_f0[1027:0]}; //am + data blocks
-        assign tx_scrambled_f1[(MAX_BLOCKS_AM*BITS_BLOCK)-1:0] = {{9252{1'd1}}, am_mapped_f1[1027:0]};
+        assign tx_scrambled_f1[(MAX_BLOCKS_AM*BITS_BLOCK)-1:0] = {{9252{1'd0}}, am_mapped_f1[1027:0]};
         
         for(l = 0; l < 544; l++) begin //5439         5430
             assign message_codeword_a[((544-l)*10)-1:((544-l)*10)-10] = tx_scrambled_f0[(20*l+9):(20*l)];
