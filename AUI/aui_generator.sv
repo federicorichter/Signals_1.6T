@@ -149,18 +149,18 @@ module aui_generator #(
     genvar k, j, l, m;
     generate
         for (k = 0; k <= 2; k++) begin : loop_k
-        for (j = 0; j <= 15; j++) begin : loop_j
-            localparam int base_idx_f0 = 320 * k + 20 * j;
-            localparam int am_start_idx = 40 * k;
-            
-            // Mapping for am_mapped_f0 -> AM Insertion
-            assign am_mapped_f0[base_idx_f0 + 9 : base_idx_f0]     = am[j][am_start_idx + 9 : am_start_idx];
-            assign am_mapped_f0[base_idx_f0 + 19 : base_idx_f0 + 10] = am[j][am_start_idx + 19 : am_start_idx + 10];
+            for (j = 0; j <= 15; j++) begin : loop_j
+                localparam int base_idx_f0 = 320 * k + 20 * j;
+                localparam int am_start_idx = 40 * k;
+                
+                // Mapping for am_mapped_f0 -> AM Insertion
+                assign am_mapped_f0[base_idx_f0 + 9 : base_idx_f0]     = am[j][am_start_idx + 9 : am_start_idx];
+                assign am_mapped_f0[base_idx_f0 + 19 : base_idx_f0 + 10] = am[j][am_start_idx + 19 : am_start_idx + 10];
 
-            // Mapping for am_mapped_f1 -> AM Insertion
-            assign am_mapped_f1[base_idx_f0 + 9 : base_idx_f0]     = am[j][am_start_idx + 29 : am_start_idx + 20];
-            assign am_mapped_f1[base_idx_f0 + 19 : base_idx_f0 + 10] = am[j][am_start_idx + 39 : am_start_idx + 30];
-        end
+                // Mapping for am_mapped_f1 -> AM Insertion
+                assign am_mapped_f1[base_idx_f0 + 9 : base_idx_f0]     = am[j][am_start_idx + 29 : am_start_idx + 20];
+                assign am_mapped_f1[base_idx_f0 + 19 : base_idx_f0 + 10] = am[j][am_start_idx + 39 : am_start_idx + 30];
+            end
         end
 
         assign am_mapped_f0[1027:960] = 68'h66666666666666666;
@@ -294,17 +294,6 @@ module aui_generator #(
 
     // Data selection
     always_comb begin
-        /*if(o_block <= 3)begin
-            o_flow_0 = am_mapped_f0[(BITS_BLOCK * o_block) +: BITS_BLOCK];
-            o_flow_1 = am_mapped_f1[(BITS_BLOCK * o_block) +: BITS_BLOCK];
-        end
-        else begin
-            o_flow_0 = 257'hffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-            o_flow_1 = 257'hffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-        end*/
-        //o_flow_0 = tx_scrambled_f0[(BITS_BLOCK * o_block) +: BITS_BLOCK];
-        //o_flow_1 = tx_scrambled_f1[(BITS_BLOCK * o_block) +: BITS_BLOCK];
-        //o_lane_0 = {message_codeword_a[5449]}
         if(o_block == 0) begin
             o_lane_0 = lane_0;
             sync_lane_0 = 1;
