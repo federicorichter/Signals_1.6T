@@ -1,4 +1,4 @@
-module flow_distributor #(
+module am_insertion #(
     parameter BITS_BLOCK = 257,
     parameter MAX_BLOCKS_AM = 40,
     parameter WORD_SIZE = 10, 

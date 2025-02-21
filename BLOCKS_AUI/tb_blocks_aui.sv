@@ -3,6 +3,7 @@ module aui_block_testbench;
 localparam AM_MAPPED_WIDTH = 10280;
 localparam WIDTH_WORD_RS = 5440;
 localparam LANE_WIDTH = 1360;
+localparam BITS_BLOCK = 257;
 
 logic clk, rst;
 wire [AM_MAPPED_WIDTH-1:0]tx_scrambled_f0, tx_scrambled_f1;
@@ -57,12 +58,30 @@ flow_distributor_r flow_distributor_real (
     .valid(valid)
 );
 
-flow_distributor aui_blocks(
-    .clk(clk),
-    .i_valid(valid),
+wire [BITS_BLOCK-1:0] flow_0_scrambled, flow_1_scrambled;
+wire valid_scrambler;
+
+scrambler x85_scrambler_f0(
+    .clk(valid),
     .rst(rst),
-    .flow_0(flow_0),
-    .flow_1(flow_1),
+    .data_in(flow_0),
+    .data_out(flow_0_scrambled),
+    .valid(valid_scrambler)
+);
+
+scrambler x85_scrambler_f1(
+    .clk(valid),
+    .rst(rst),
+    .data_in(flow_1),
+    .data_out(flow_1_scrambled)
+);
+
+am_insertion aui_blocks(
+    .clk(clk),
+    .i_valid(valid_scrambler),
+    .rst(rst),
+    .flow_0(flow_0_scrambled),
+    .flow_1(flow_1_scrambled),
     .tx_scrambled_f0(tx_scrambled_f0),
     .tx_scrambled_f1(tx_scrambled_f1),
     .valid_signal(valid1)
