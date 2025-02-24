@@ -30,10 +30,10 @@ reg [WIDTH_WORD_RS-1:0] message_codeword_a, message_codeword_b, message_codeword
 
 always_comb begin
     for (int l = 0; l < 514; l++) begin
-        message_codeword_a_temp[(544-l)*10-:10] = tx_scrambled_f0[(20*l)+:10];
-        message_codeword_b_temp[(544-l)*10-:10] = tx_scrambled_f0[(20*l+10)+:10];
-        message_codeword_c_temp[(544-l)*10-:10] = tx_scrambled_f1[(20*l)+:10];
-        message_codeword_d_temp[(544-l)*10-:10] = tx_scrambled_f1[(20*l+10)+:10];
+        message_codeword_a_temp[((544-l)*10 - 1)-:10] = tx_scrambled_f0[(20*l)+:10];
+        message_codeword_b_temp[((544-l)*10 - 1)-:10] = tx_scrambled_f0[(20*l+10)+:10];
+        message_codeword_c_temp[((544-l)*10 - 1)-:10] = tx_scrambled_f1[(20*l)+:10];
+        message_codeword_d_temp[((544-l)*10 - 1)-:10] = tx_scrambled_f1[(20*l+10)+:10];
     end
     message_codeword_a_temp[299:0] = {300{2'd0}};
     message_codeword_b_temp[299:0] = {300{2'd1}};

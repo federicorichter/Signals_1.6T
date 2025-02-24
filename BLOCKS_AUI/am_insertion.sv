@@ -125,23 +125,23 @@ module am_insertion #(
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            counter_blocks <= 4; // we already start with AM
+            counter_blocks <= 3; // we already start with AM
             tx_scrambled_f0_next[1027:0] <= am_mapped_f0;
             tx_scrambled_f0 <= {AM_MAPPED_WIDTH{1'b0}};
             tx_scrambled_f1 <= {AM_MAPPED_WIDTH{1'b0}};
             tx_scrambled_f0_next[10279:1028] <= {9251{1'd0}};
             tx_scrambled_f1_next[1027:0] <= am_mapped_f1;
             tx_scrambled_f1_next[10279:1028] <= {9251{1'd0}};
-            counter_am <= 4;
+            counter_am <= 3;
             valid_signal <= 0;
         end else if(i_valid) begin
             valid_signal <= 0;
-            if(counter_am < 327680 - 1) begin  
+            if(counter_am < 327680 ) begin  
                 counter_am <= counter_am + 1;
-                if(counter_blocks < 40 - 1) begin
+                if(counter_blocks < 40 ) begin
                     counter_blocks <= counter_blocks + 1;
-                    tx_scrambled_f0_next[(counter_blocks * 257) +: 257] <= flow_0;
-                    tx_scrambled_f1_next[(counter_blocks * 257) +: 257] <= flow_1;
+                    tx_scrambled_f0_next[((counter_blocks * 257) - 1) +: 257] <= flow_0;
+                    tx_scrambled_f1_next[((counter_blocks * 257) - 1) +: 257] <= flow_1;
                 end
                 else begin // restart block for output
                     counter_blocks <= 0;
@@ -151,8 +151,8 @@ module am_insertion #(
                 end
             end
             else begin //we should restart and insert AM
-                counter_am <= 4;
-                counter_blocks <= 4; // we already start with AM
+                counter_am <= 3;
+                counter_blocks <= 3; // we already start with AM
                 tx_scrambled_f0_next[1027:0] <= am_mapped_f0;
                 tx_scrambled_f1_next[1027:0] <= am_mapped_f1;
             end
