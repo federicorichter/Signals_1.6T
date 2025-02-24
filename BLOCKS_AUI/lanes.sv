@@ -54,9 +54,13 @@ module lanes #(
 );
 
 //reg [WIDTH_WORD_RS-1:0] word_A, word_B, word_C, word_D;
+reg sync_lane_next;
+integer counter_blocks;
 
 always_ff @(posedge clk) begin
     if(rst) begin
+        sync_lane_next <= 0;
+        counter_blocks <= 8191;
         o_lane_0 <= {LANE_WIDTH{1'd0}};
         o_lane_1 <= {LANE_WIDTH{1'd0}};
         o_lane_2 <= {LANE_WIDTH{1'd0}};
@@ -75,6 +79,14 @@ always_ff @(posedge clk) begin
         o_lane_15 <= {LANE_WIDTH{1'd0}};
     end 
     else if(i_valid) begin
+        if(counter_blocks == 8191)begin
+            sync_lane_next <= 1;
+            counter_blocks <= 0;
+        end
+        else begin
+            counter_blocks <= counter_blocks + 1;
+            sync_lane_next <= 0;
+        end
         for(int k = 0;k <= 33; k++) begin
             //for(j = 0;j <= 15;j++)begin
             o_lane_0[(40*k) +: 10] <=word_A[((544 - (16*k)) * 10)-1 -: 10];
@@ -162,21 +174,21 @@ always_ff @(posedge clk) begin
         end
     end
 
-    assign sync_lane_0 = i_valid;
-    assign sync_lane_1 = i_valid;
-    assign sync_lane_2 = i_valid;
-    assign sync_lane_3 = i_valid;
-    assign sync_lane_4 = i_valid;
-    assign sync_lane_5 = i_valid;
-    assign sync_lane_6 = i_valid;
-    assign sync_lane_7 = i_valid;
-    assign sync_lane_8 = i_valid;
-    assign sync_lane_9 = i_valid;
-    assign sync_lane_10 = i_valid;
-    assign sync_lane_11 = i_valid;
-    assign sync_lane_12 = i_valid;
-    assign sync_lane_13 = i_valid;
-    assign sync_lane_14 = i_valid;
-    assign sync_lane_15 = i_valid;
+    assign sync_lane_0 = sync_lane_next;
+    assign sync_lane_1 = sync_lane_next;
+    assign sync_lane_2 = sync_lane_next;
+    assign sync_lane_3 = sync_lane_next;
+    assign sync_lane_4 = sync_lane_next;
+    assign sync_lane_5 = sync_lane_next;
+    assign sync_lane_6 = sync_lane_next;
+    assign sync_lane_7 = sync_lane_next;
+    assign sync_lane_8 = sync_lane_next;
+    assign sync_lane_9 = sync_lane_next;
+    assign sync_lane_10 = sync_lane_next;
+    assign sync_lane_11 = sync_lane_next;
+    assign sync_lane_12 = sync_lane_next;
+    assign sync_lane_13 = sync_lane_next;
+    assign sync_lane_14 = sync_lane_next;
+    assign sync_lane_15 = sync_lane_next;
 
 endmodule
