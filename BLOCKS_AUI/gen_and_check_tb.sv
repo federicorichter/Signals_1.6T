@@ -1,4 +1,4 @@
-module aui_block_testbench;
+module aui_block_testbench2;
 
 localparam AM_MAPPED_WIDTH = 10280;
 localparam WIDTH_WORD_RS = 5440;
