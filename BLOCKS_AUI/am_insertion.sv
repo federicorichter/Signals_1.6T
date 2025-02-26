@@ -151,8 +151,8 @@ module am_insertion #(
                 end
             end
             else begin //we should restart and insert AM
-                counter_am <= 3;
-                counter_blocks <= 3; // we already start with AM
+                counter_am <= 5;
+                counter_blocks <= 5; // we already start with AM
                 tx_scrambled_f0_next[1027:0] <= am_mapped_f0;
                 tx_scrambled_f1_next[1027:0] <= am_mapped_f1;
                 tx_scrambled_f0_next[(1028+257):1028] <= flow_0;
