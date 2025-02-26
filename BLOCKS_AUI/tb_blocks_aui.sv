@@ -35,7 +35,7 @@ initial begin
     rst = 1;
     #20 rst = 0;
     // Run the simulation for a specific time
-    for (int i = 0; i < 100; i++) begin
+    /*for (int i = 0; i < 100; i++) begin
         @(posedge clk);
         blocks = {257{3'b1}};
         @(posedge clk);
@@ -44,15 +44,24 @@ initial begin
         blocks = {257{3'd3}};
         @(posedge clk);
         blocks = {257{3'd4}};
-    end
+    end*/
     #4000000;
     $finish;
 end
 
+wire valid_generator;
+
+block_generator blocks_generated(
+    .clk(clk),
+    .rst(rst),
+    .data_out(blocks),
+    .valid_gen(valid_generator)
+);
 
 flow_distributor_r flow_distributor_real (
     .clk(clk),
     .rst(rst),
+    .i_valid(valid_generator),
     .input_blocks(blocks),
     .flow_0(flow_0),
     .flow_1(flow_1),
