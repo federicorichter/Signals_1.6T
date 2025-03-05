@@ -92,9 +92,11 @@ module aui_checker #(
     logic [LANE_WIDTH            - 1 : 0] stored_lanes    [0 : AM_LANES - 1];    // Registros para almacenar cada lane
     
     // Para almacenar los valores de extracted_am de la iteración anterior, se usa para sincronizar 
-    logic [AM_WIDTH              - 1 : 0] last_am         [0 : AM_LANES - 1];
-    logic [AM_LANES              - 1 : 0] sync_lanes; // Bandera de sincronización para cada lane 
+    logic [AM_WIDTH            - 1 : 0] last_am         [0 : AM_LANES - 1];
+    logic [AM_LANES            - 1 : 0] continue_am_error_flag; // Bandera de error para AMs que no se repiten
+    logic [AM_LANES            - 1 : 0] sync_lanes; // Bandera de sincronización para cada lane 
     logic [AM_LANES            - 1 : 0] expected_am_flag;
+    logic [AM_LANES            - 1 : 0] lane_locked;
 
     // Esto es para identificar que lane es cual
     logic [3:0] lane_mapping [0:AM_LANES-1];
@@ -220,6 +222,21 @@ module aui_checker #(
         // guardar los AM para comparar con la proxima vez
         last_am = extracted_am;
 
+        // comparo para cada lane si el AM recibido es igual al anterior guardado
+        for (int i = 0; i < AM_LANES; i = i + 1'b1) begin
+            if (has_synced[i] && extracted_am[i] != last_am[i]) begin
+                continue_am_error_flag[i] = 1'b1;
+            end
+        end
+
+        // seteo el lane lock si todas las flags de error cumplen
+        for (int i = 0; i < AM_LANES; i = i + 1'b1) begin
+            if ( expected_am_flag[i] && !continue_am_error_flag[i] && !gap_error_flag[i] && has_synced[i]) begin
+                lane_locked[i] = 1'b1;
+                $display("Lane %d locked!\n", i);
+            end
+        end
+
         // mux 10 bits para Round Robin
         for(int i = 0; i < TOTAL_ITERATIONS; i = i + 1'b1) begin
             for(int j = 0; j < AM_LANES; j = j + 1'b1) begin
@@ -274,6 +291,8 @@ module aui_checker #(
             end
             gap_error_flag <= {AM_LANES {1'b0}}; // Inicializar todas las banderas de error en 0
             has_synced     <= {AM_LANES {1'b0}};     // Inicializar las señales de sincronización en 0
+            continue_am_error_flag <= {AM_LANES {1'b0}}; // Inicializar las banderas de error de AM en 0
+            lane_locked <= {AM_LANES {1'b0}}; // Inicializar las banderas de bloqueo de lane en 0
         end else begin
         
             // Si los lanes no están mapeados, comienzo a detectarlos
