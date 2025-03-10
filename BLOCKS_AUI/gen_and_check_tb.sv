@@ -45,7 +45,7 @@ initial begin
         @(posedge clk);
         blocks = {257{3'd4}};
     end*/
-    #40000;
+    #4000000;
     $finish;
 end
 wire valid_generator;
