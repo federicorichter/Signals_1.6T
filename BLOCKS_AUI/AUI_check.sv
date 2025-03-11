@@ -53,10 +53,11 @@ module aui_checker #(
     localparam TOTAL_CODEWORDS = 4;
     localparam TOTAL_ITERATIONS = LANE_WIDTH / (TOTAL_CODEWORDS * ROUND_ROBIN_BITS);
     localparam FEC_WIDTH = 300;
-    localparam CODEWORD_WIDTH_WO_FEC = CODEWORD_WIDTH - FEC_WIDTH;
-    localparam BLOCK_W_AM_WIDTH = CODEWORD_WIDTH_WO_FEC * 2;
+    localparam CODEWORD_WIDTH_WO_FEC = CODEWORD_WIDTH - FEC_WIDTH;  // 5440 - 300 = 5140
+    localparam BLOCK_W_AM_WIDTH = CODEWORD_WIDTH_WO_FEC * 2;        // 5140 * 2 = 10280
     localparam AM_MAPPED_WIDTH = 1028;
-    localparam BLOCK_WO_AM_WIDTH = BLOCK_W_AM_WIDTH - AM_MAPPED_WIDTH;
+    localparam BLOCK_WO_AM_WIDTH = BLOCK_W_AM_WIDTH - AM_MAPPED_WIDTH; // 10280 - 1028 = 9220
+    localparam NUM_BLOCKS = 36; // Bloques con data util
 
 
     // AMs ya invertidos para comparar directamente con los que ingresan
@@ -92,9 +93,11 @@ module aui_checker #(
     logic [LANE_WIDTH            - 1 : 0] stored_lanes    [0 : AM_LANES - 1];    // Registros para almacenar cada lane
     
     // Para almacenar los valores de extracted_am de la iteración anterior, se usa para sincronizar 
-    logic [AM_WIDTH              - 1 : 0] last_am         [0 : AM_LANES - 1];
-    logic [AM_LANES              - 1 : 0] sync_lanes; // Bandera de sincronización para cada lane 
+    logic [AM_WIDTH            - 1 : 0] last_am         [0 : AM_LANES - 1];
+    logic [AM_LANES            - 1 : 0] continue_am_error_flag; // Bandera de error para AMs que no se repiten
+    logic [AM_LANES            - 1 : 0] sync_lanes; // Bandera de sincronización para cada lane 
     logic [AM_LANES            - 1 : 0] expected_am_flag;
+    logic [AM_LANES            - 1 : 0] lane_locked;
 
     // Esto es para identificar que lane es cual
     logic [3:0] lane_mapping [0:AM_LANES-1];
@@ -119,16 +122,19 @@ module aui_checker #(
     logic [CODEWORD_WIDTH_WO_FEC - 1 : 0] codeword_d_wo_fec;
     
     // Tx scrambled 0 y 1
-    logic [BLOCK_W_AM_WIDTH      - 1 : 0] tx_scrambled_0;
+    logic [BLOCK_W_AM_WIDTH      - 1 : 0] tx_scrambled_0; // 10280 = 40 * 257
     logic [BLOCK_W_AM_WIDTH      - 1 : 0] tx_scrambled_1;
     
     // Tx scrambled 0 y 1 sin AM
-    logic [BLOCK_WO_AM_WIDTH     - 1 : 0] tx_scrambled_0_wo_am;
-    logic [BLOCK_WO_AM_WIDTH     - 1 : 0] tx_scrambled_1_wo_am;
+    logic [BLOCK_WO_AM_WIDTH     - 1 : 0] tx_scrambled_0_wo_am; // 9220
+    logic [BLOCK_WO_AM_WIDTH     - 1 : 0] tx_scrambled_1_wo_am; // 257 * 36 = 9252
     
     // AM mapped
     logic [AM_MAPPED_WIDTH       - 1 : 0] am_mapped_0;
     logic [AM_MAPPED_WIDTH       - 1 : 0] am_mapped_1;
+
+    // Mensaje original decodificado
+    logic [BITS_BLOCK - 1 : 0           ] input_decoded [NUM_BLOCKS*2 - 1 : 0]; // 257 bits
 
     // Guardamos los valores de AM parametrizado en el registro usado en la comparación
     assign expected_am[AM_LANE[0] ]  = EXPECTED_AM_LANE_0;
@@ -220,6 +226,21 @@ module aui_checker #(
         // guardar los AM para comparar con la proxima vez
         last_am = extracted_am;
 
+        // comparo para cada lane si el AM recibido es igual al anterior guardado
+        for (int i = 0; i < AM_LANES; i = i + 1'b1) begin
+            if (has_synced[i] && extracted_am[i] != last_am[i]) begin
+                continue_am_error_flag[i] = 1'b1;
+            end
+        end
+
+        // seteo el lane lock si todas las flags de error cumplen
+        for (int i = 0; i < AM_LANES; i = i + 1'b1) begin
+            if ( expected_am_flag[i] && !continue_am_error_flag[i] && !gap_error_flag[i] && has_synced[i]) begin
+                lane_locked[i] = 1'b1;
+                $display("Lane %d locked!\n", i);
+            end
+        end
+
         // mux 10 bits para Round Robin
         for(int i = 0; i < TOTAL_ITERATIONS; i = i + 1'b1) begin
             for(int j = 0; j < AM_LANES; j = j + 1'b1) begin
@@ -253,17 +274,29 @@ module aui_checker #(
         end
 
         // Elimina los AM
-        tx_scrambled_0_wo_am = tx_scrambled_0[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH];
+        tx_scrambled_0_wo_am = tx_scrambled_0[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH]; // Desde el bit 10279 hasta el 9220
         tx_scrambled_1_wo_am = tx_scrambled_1[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH];
         am_mapped_0          = tx_scrambled_0[AM_MAPPED_WIDTH  - 1  :                 0];
         am_mapped_1          = tx_scrambled_1[AM_MAPPED_WIDTH  - 1  :                 0];
 
+        // Armar un for que agarre tx_scrambled_0_wo_am y 1 y junte los datos de ambos en un arreglo de 
+        // varias posiciones de 257 bits cada uno. Los primeros 257 son de tx_scrambled_0_wo_am y van al 
+        // primer lugar del arreglo, los próximos son de tx_scrambled_1_wo_am y van al segundo lugar, y así
+        // sucesivamente hasta que se llenen todas las posiciones del arreglo. El arreglo es input_decoded
+
+        for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
+            input_decoded[2*i      ] = tx_scrambled_0_wo_am[(i + 1) * BITS_BLOCK - 1 -: BITS_BLOCK];
+            input_decoded[(2*i) + 1] = tx_scrambled_1_wo_am[(i + 1) * BITS_BLOCK - 1 -: BITS_BLOCK];
+        end
     end
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             // Reiniciar el mapeo de lanes
             mapping_complete <= 0;
+            for (int i = 0; i < NUM_BLOCKS; i++) begin
+                input_decoded[i] <= 0;
+            end
             for (int i = 0; i < AM_LANES; i++) begin
                 lane_mapping[i] <= 4'h0;
             end
@@ -274,6 +307,8 @@ module aui_checker #(
             end
             gap_error_flag <= {AM_LANES {1'b0}}; // Inicializar todas las banderas de error en 0
             has_synced     <= {AM_LANES {1'b0}};     // Inicializar las señales de sincronización en 0
+            continue_am_error_flag <= {AM_LANES {1'b0}}; // Inicializar las banderas de error de AM en 0
+            lane_locked <= {AM_LANES {1'b0}}; // Inicializar las banderas de bloqueo de lane en 0
         end else begin
         
             // Si los lanes no están mapeados, comienzo a detectarlos
