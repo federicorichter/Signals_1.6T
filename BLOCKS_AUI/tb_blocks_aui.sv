@@ -4,7 +4,7 @@ localparam AM_MAPPED_WIDTH = 10280;
 localparam WIDTH_WORD_RS = 5440;
 localparam LANE_WIDTH = 1360;
 localparam BITS_BLOCK = 257;
-
+localparam NUM_LANES = 16;
 logic clk, rst;
 wire [AM_MAPPED_WIDTH-1:0]tx_scrambled_f0, tx_scrambled_f1;
 wire [WIDTH_WORD_RS-1:0] word_A, word_B, word_C, word_D;
@@ -176,6 +176,36 @@ lanes lanes_output(
     .sync_lane_14(sync_lane_14),
     .sync_lane_15(sync_lane_15)
     
+);
+
+reg shuffle_enable = 1;
+wire [LANE_WIDTH-1:0]o_shuffler[0:NUM_LANES-1];
+wire [LANE_WIDTH-1:0] i_lanes [0:NUM_LANES-1]; // Conexión de entrada
+
+assign i_lanes[0]  = lane_0;
+assign i_lanes[1]  = lane_1;
+assign i_lanes[2]  = lane_2;
+assign i_lanes[3]  = lane_3;
+assign i_lanes[4]  = lane_4;
+assign i_lanes[5]  = lane_5;
+assign i_lanes[6]  = lane_6;
+assign i_lanes[7]  = lane_7;
+assign i_lanes[8]  = lane_8;
+assign i_lanes[9]  = lane_9;
+assign i_lanes[10] = lane_10;
+assign i_lanes[11] = lane_11;
+assign i_lanes[12] = lane_12;
+assign i_lanes[13] = lane_13;
+assign i_lanes[14] = lane_14;
+assign i_lanes[15] = lane_15;
+
+
+lane_shuffler shuffler (
+    .i_clk(clk),
+    .i_rst_n(rst),
+    .i_shuffle_enable(shuffle_enable), // Flag para habilitar el desorden de lanes
+    .i_data(i_lanes), // Datos de entrada en cada lane
+    .o_data(o_shuffler)  // Datos de salida en cada lane
 );
 
 endmodule
