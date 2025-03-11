@@ -1,4 +1,4 @@
-module aui_block_testbench2;
+module aui_block_testbench;
 
 localparam AM_MAPPED_WIDTH = 10280;
 localparam WIDTH_WORD_RS = 5440;
@@ -35,24 +35,26 @@ initial begin
     rst = 1;
     #20 rst = 0;
     // Run the simulation for a specific time
-    /*for (int i = 0; i < 100; i++) begin
+    for (int i = 0; i < 100; i++) begin
         @(posedge clk);
-        blocks = {257{3'b1}};
+        gen_test_scrambler = {257{1'b1}};
         @(posedge clk);
-        blocks = {257{3'd2}};
+        gen_test_scrambler = {257{1'd0}};
         @(posedge clk);
-        blocks = {257{3'd3}};
+        gen_test_scrambler = {257{1'd1}};
         @(posedge clk);
-        blocks = {257{3'd4}};
-    end*/
+        gen_test_scrambler = {257{1'd0}};
+    end
     #4000000;
     $finish;
 end
+
 wire valid_generator;
 
 block_generator blocks_generated(
     .clk(clk),
     .rst(rst),
+        .i_config(2'b00),   //.i_config(2'b10),
     .data_out(blocks),
     .valid_gen(valid_generator)
 );
@@ -62,13 +64,37 @@ flow_distributor_r flow_distributor_real (
     .rst(rst),
     .i_valid(valid_generator),
     .input_blocks(blocks),
-    .flow_0(flow_0),
-    .flow_1(flow_1),
-    .valid(valid)
+    .flow_0(flow_0),    // Output
+    .flow_1(flow_1),    // Output
+    .valid(valid)       // Output
 );
 
-wire [BITS_BLOCK-1:0] flow_0_scrambled, flow_1_scrambled;
-wire valid_scrambler;
+reg [BITS_BLOCK-1:0] gen_test_scrambler;
+wire [BITS_BLOCK-1:0] flow_0_scrambled, flow_1_scrambled, test_scrambler_i, test_scrambler_o;
+wire valid_scrambler, valid_scrambler_1;
+/*
+lfsr_scramble  #(
+    .DATA_WIDTH(BITS_BLOCK)
+)
+test_scrambler(
+    .clk(clk),
+    .rst(rst),
+    .data_in(gen_test_scrambler),
+    .data_out(test_scrambler_i),
+    //.valid(valid_scrambler_1)
+    .data_in_valid(clk)
+);
+
+lfsr_scramble #(
+    .DATA_WIDTH(BITS_BLOCK)
+    ) descrambler
+    (
+    .clk(clk),
+    .rst(rst),
+    .data_in(test_scrambler_i),
+    .data_out(test_scrambler_o),
+    .data_in_valid(clk)
+);*/
 
 scrambler x85_scrambler_f0(
     .clk(valid),
@@ -81,18 +107,18 @@ scrambler x85_scrambler_f0(
 scrambler x85_scrambler_f1(
     .clk(valid),
     .rst(rst),
-    .data_in(flow_1),
-    .data_out(flow_1_scrambled)
+    .data_in(flow_1),                   // Input
+    .data_out(flow_1_scrambled)         // Output
 );
 
 am_insertion aui_blocks(
     .clk(clk),
-    .i_valid(valid_scrambler),
+    .i_valid(valid),
     .rst(rst),
-    .flow_0(flow_0_scrambled),
-    .flow_1(flow_1_scrambled),
-    .tx_scrambled_f0(tx_scrambled_f0),
-    .tx_scrambled_f1(tx_scrambled_f1),
+    .flow_0(flow_0_scrambled), //.flow_0(flow_0),                    // Input
+    .flow_1(flow_1_scrambled), //.flow_1(flow_1),                    // Input
+    .tx_scrambled_f0(tx_scrambled_f0),  // Output
+    .tx_scrambled_f1(tx_scrambled_f1),  // Output
     .valid_signal(valid1)
 );
 
@@ -100,8 +126,8 @@ rs_module reed_salomon (
     .clk(clk),
     .i_valid(valid1),
     .rst(rst),
-    .tx_scrambled_f0(tx_scrambled_f0),
-    .tx_scrambled_f1(tx_scrambled_f1),
+    .tx_scrambled_f0(tx_scrambled_f0),  // Input
+    .tx_scrambled_f1(tx_scrambled_f1),  // Input
     .valid(valid_rs),
     .word_A(word_A),
     .word_B(word_B),

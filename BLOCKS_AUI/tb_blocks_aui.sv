@@ -4,7 +4,7 @@ localparam AM_MAPPED_WIDTH = 10280;
 localparam WIDTH_WORD_RS = 5440;
 localparam LANE_WIDTH = 1360;
 localparam BITS_BLOCK = 257;
-localparam NUM_LANES = 16;
+
 logic clk, rst;
 wire [AM_MAPPED_WIDTH-1:0]tx_scrambled_f0, tx_scrambled_f1;
 wire [WIDTH_WORD_RS-1:0] word_A, word_B, word_C, word_D;
@@ -37,64 +37,30 @@ initial begin
     // Run the simulation for a specific time
     for (int i = 0; i < 100; i++) begin
         @(posedge clk);
-        gen_test_scrambler = {257{1'b1}};
+        blocks = {257{3'b1}};
         @(posedge clk);
-        gen_test_scrambler = {257{1'd0}};
+        blocks = {257{3'd2}};
         @(posedge clk);
-        gen_test_scrambler = {257{1'd1}};
+        blocks = {257{3'd3}};
         @(posedge clk);
-        gen_test_scrambler = {257{1'd0}};
+        blocks = {257{3'd4}};
     end
     #4000000;
     $finish;
 end
 
-wire valid_generator;
-
-block_generator blocks_generated(
-    .clk(clk),
-    .rst(rst),
-    .i_config(2'b10),
-    .data_out(blocks),
-    .valid_gen(valid_generator)
-);
 
 flow_distributor_r flow_distributor_real (
     .clk(clk),
     .rst(rst),
-    .i_valid(valid_generator),
     .input_blocks(blocks),
     .flow_0(flow_0),
     .flow_1(flow_1),
     .valid(valid)
 );
 
-reg [BITS_BLOCK-1:0] gen_test_scrambler;
-wire [BITS_BLOCK-1:0] flow_0_scrambled, flow_1_scrambled, test_scrambler_i, test_scrambler_o;
-wire valid_scrambler, valid_scrambler_1;
-/*
-lfsr_scramble  #(
-    .DATA_WIDTH(BITS_BLOCK)
-)
-test_scrambler(
-    .clk(clk),
-    .rst(rst),
-    .data_in(gen_test_scrambler),
-    .data_out(test_scrambler_i),
-    //.valid(valid_scrambler_1)
-    .data_in_valid(clk)
-);
-
-lfsr_scramble #(
-    .DATA_WIDTH(BITS_BLOCK)
-    ) descrambler
-    (
-    .clk(clk),
-    .rst(rst),
-    .data_in(test_scrambler_i),
-    .data_out(test_scrambler_o),
-    .data_in_valid(clk)
-);*/
+wire [BITS_BLOCK-1:0] flow_0_scrambled, flow_1_scrambled;
+wire valid_scrambler;
 
 scrambler x85_scrambler_f0(
     .clk(valid),
@@ -113,10 +79,10 @@ scrambler x85_scrambler_f1(
 
 am_insertion aui_blocks(
     .clk(clk),
-    .i_valid(valid),
+    .i_valid(valid_scrambler),
     .rst(rst),
-    .flow_0(flow_0),
-    .flow_1(flow_1),
+    .flow_0(flow_0_scrambled),
+    .flow_1(flow_1_scrambled),
     .tx_scrambled_f0(tx_scrambled_f0),
     .tx_scrambled_f1(tx_scrambled_f1),
     .valid_signal(valid1)
@@ -176,36 +142,6 @@ lanes lanes_output(
     .sync_lane_14(sync_lane_14),
     .sync_lane_15(sync_lane_15)
     
-);
-
-reg shuffle_enable = 1;
-wire [LANE_WIDTH-1:0]o_shuffler[0:NUM_LANES-1];
-wire [LANE_WIDTH-1:0] i_lanes [0:NUM_LANES-1]; // Conexión de entrada
-
-assign i_lanes[0]  = lane_0;
-assign i_lanes[1]  = lane_1;
-assign i_lanes[2]  = lane_2;
-assign i_lanes[3]  = lane_3;
-assign i_lanes[4]  = lane_4;
-assign i_lanes[5]  = lane_5;
-assign i_lanes[6]  = lane_6;
-assign i_lanes[7]  = lane_7;
-assign i_lanes[8]  = lane_8;
-assign i_lanes[9]  = lane_9;
-assign i_lanes[10] = lane_10;
-assign i_lanes[11] = lane_11;
-assign i_lanes[12] = lane_12;
-assign i_lanes[13] = lane_13;
-assign i_lanes[14] = lane_14;
-assign i_lanes[15] = lane_15;
-
-
-lane_shuffler shuffler (
-    .i_clk(clk),
-    .i_rst_n(rst),
-    .i_shuffle_enable(shuffle_enable), // Flag para habilitar el desorden de lanes
-    .i_data(i_lanes), // Datos de entrada en cada lane
-    .o_data(o_shuffler)  // Datos de salida en cada lane
 );
 
 endmodule

@@ -285,9 +285,17 @@ module aui_checker #(
         // sucesivamente hasta que se llenen todas las posiciones del arreglo. El arreglo es input_decoded
 
         for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
-            input_decoded[2*i      ] = tx_scrambled_0_wo_am[(i + 1) * BITS_BLOCK - 1 -: BITS_BLOCK];
-            input_decoded[(2*i) + 1] = tx_scrambled_1_wo_am[(i + 1) * BITS_BLOCK - 1 -: BITS_BLOCK];
+            int start_f0 = (NUM_BLOCKS - 1 - i) * BITS_BLOCK;
+            int start_f1 = (NUM_BLOCKS - 1 - i) * BITS_BLOCK;
+        
+            input_decoded[2*i]     = tx_scrambled_0_wo_am[start_f0 +: BITS_BLOCK]; // Extrae de flow_0
+            input_decoded[2*i + 1] = tx_scrambled_1_wo_am[start_f1 +: BITS_BLOCK]; // Extrae de flow_1
+        
+            // Depuración para verificar la extracción
+            $display("Decoded[%0d] = %h", 2*i, input_decoded[2*i]);
+            $display("Decoded[%0d] = %h", 2*i+1, input_decoded[2*i+1]);
         end
+    
     end
 
     always_ff @(posedge clk or posedge rst) begin

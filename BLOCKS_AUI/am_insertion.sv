@@ -96,6 +96,9 @@ module am_insertion #(
     integer am_start_idx;
     logic [1027:0] am_mapped_f0;
     logic [1027:0] am_mapped_f1;
+    
+    logic [BITS_BLOCK-1:0] flow_buffer [0:40]; // Buffer de 80 valores (257 bits cada uno)
+    integer counter_store; // Índice del buffer
 
     // Example initialization for alignment markers
     genvar k, j, l, m;
@@ -127,6 +130,7 @@ module am_insertion #(
         valid_signal <= 0;
         if (rst) begin
             counter_blocks <= 4; // we already start with AM
+            counter_store <= 0;           
             tx_scrambled_f0_next[1027:0] <= am_mapped_f0;
             tx_scrambled_f0 <= {AM_MAPPED_WIDTH{1'b0}};
             tx_scrambled_f1 <= {AM_MAPPED_WIDTH{1'b0}};
@@ -137,6 +141,22 @@ module am_insertion #(
             valid_signal <= 0;
         end else if(i_valid) begin
             valid_signal <= 0;
+            
+            
+            
+            // Almacenar en buffer alternadamente (flow_0 en pares, flow_1 en impares)
+            if (counter_store < 40) begin
+                if (counter_store % 2 == 0) begin
+                    flow_buffer[counter_store] <= flow_0;
+                end else begin
+                    flow_buffer[counter_store] <= flow_1;
+                end
+                counter_store <= counter_store + 1;
+            end
+            else begin
+                counter_store <= 0;
+            end
+            
             if(counter_am < 327680 ) begin  
                 counter_am <= counter_am + 1;
                 if(counter_blocks < 40 ) begin
@@ -151,9 +171,11 @@ module am_insertion #(
                     valid_signal <= 1;
                 end
             end
+            
             else begin //we should restart and insert AM
                 counter_am <= 5;
                 counter_blocks <= 5; // we already start with AM
+                counter_store <= 0; // Reiniciar almacenamiento
                 tx_scrambled_f0_next[1027:0] <= am_mapped_f0;
                 tx_scrambled_f1_next[1027:0] <= am_mapped_f1;
                 tx_scrambled_f0_next[(1028+257):1028] <= flow_0;
