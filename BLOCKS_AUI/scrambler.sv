@@ -2,8 +2,8 @@ module scrambler (
     input  wire         clk,
     input  wire         rst,
     input  wire [256:0] data_in,   // Entrada de 257 bits
-    output reg  [256:0] data_out,   // Salida de 257 bits scrambleados
-    output logic valid
+    output reg  [256:0] data_out,  // Salida de 257 bits scrambleados
+    output reg          valid      // Señal de validación
 );
     reg [57:0] state; // Estado interno del scrambler
 
@@ -11,7 +11,7 @@ module scrambler (
         if (rst) begin
             state <= 58'h3FFFFFFFFFFFFFF; // Estado inicial recomendado
             data_out <= 0;
-            //valid <= 0;
+            valid <= 0;
         end else begin
             integer i;
             reg [256:0] scrambled;
@@ -19,6 +19,7 @@ module scrambler (
             reg feedback;
 
             next_state = state; // Mantener el estado actual para actualización
+            scrambled = 0;       // Inicializar
 
             for (i = 0; i < 257; i = i + 1) begin
                 feedback = next_state[57] ^ next_state[38]; // X^58 + X^39 + 1
@@ -28,8 +29,7 @@ module scrambler (
 
             data_out <= scrambled; // Salida del bloque scrambleado
             state <= next_state;   // Actualizar el estado del scrambler
+            valid <= 1;            // Indicar que los datos están listos por un ciclo
         end
     end
-
-    assign valid = clk;
 endmodule

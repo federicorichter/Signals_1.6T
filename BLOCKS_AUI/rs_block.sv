@@ -43,21 +43,21 @@ end
 
 always_ff @(posedge clk) begin
     if(rst) begin
-        message_codeword_a <= {WIDTH_WORD_RS{1'b0}};
-        message_codeword_b <= {WIDTH_WORD_RS{1'b0}};
-        message_codeword_c <= {WIDTH_WORD_RS{1'b0}};
-        message_codeword_d <= {WIDTH_WORD_RS{1'b0}};
+        message_codeword_a = {WIDTH_WORD_RS{1'b0}};
+        message_codeword_b = {WIDTH_WORD_RS{1'b0}};
+        message_codeword_c = {WIDTH_WORD_RS{1'b0}};
+        message_codeword_d = {WIDTH_WORD_RS{1'b0}};
         valid <= 0;
     end
     else if(i_valid) begin
-        message_codeword_a <= message_codeword_a_temp;
-        message_codeword_b <= message_codeword_b_temp;
-        message_codeword_c <= message_codeword_c_temp;
-        message_codeword_d <= message_codeword_d_temp;
-        valid <= 1;
+        message_codeword_a = message_codeword_a_temp;
+        message_codeword_b = message_codeword_b_temp;
+        message_codeword_c = message_codeword_c_temp;
+        message_codeword_d = message_codeword_d_temp;
+        valid = 1;
     end
     else begin
-        valid <= 0;
+        valid = 0;
     end
 end
 

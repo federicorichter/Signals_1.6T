@@ -82,6 +82,7 @@ always_ff @(posedge clk) begin
         if(counter_blocks == 8191)begin
             sync_lane_next <= 1;
             counter_blocks <= 0;
+            $display("Sync lane");
         end
         else begin
             counter_blocks <= counter_blocks + 1;

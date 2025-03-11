@@ -19,21 +19,22 @@ reg flow_change = 0;
 
 always_ff @(posedge clk) begin
         if (rst) begin
-            valid <= 0;
-            flow_change <= 0;
-            flow_0 <= 0;
-            flow_1 <= 0;
+            valid = 0;
+            flow_change = 0;
+            flow_0 = 0;
+            flow_1 = 0;
         end
         else if(i_valid) begin
+            valid = 1;
             if(flow_change) begin
-                flow_change <= 0;
-                flow_1 <= input_blocks;
-                valid <= 1;
+                flow_change = 0;
+                flow_1 = input_blocks;
+                valid = 1;
             end
             else begin
-                flow_change <= 1;
-                flow_0 <= input_blocks;
-                valid <= 0;
+                flow_change = 1;
+                flow_0 = input_blocks;
+                valid = 0;
             end
         end
 end
