@@ -20,6 +20,9 @@ wire [LANE_WIDTH-1:0]lane_0, lane_1, lane_2, lane_3, lane_4,
 wire sync_lane_0, sync_lane_1, sync_lane_2, sync_lane_3, sync_lane_4,
      sync_lane_5, sync_lane_6, sync_lane_7, sync_lane_8, sync_lane_9,
      sync_lane_10, sync_lane_11, sync_lane_12, sync_lane_13, sync_lane_14, sync_lane_15;
+     
+wire [BITS_BLOCK-1 : 0] to_desc_0, to_desc_1, desc_0, desc_1;
+wire descrambler_clk;
  
 
 initial begin
@@ -215,24 +218,29 @@ aui_checker #(
         .sync_lane_12(sync_lane_12),
         .sync_lane_13(sync_lane_13),
         .sync_lane_14(sync_lane_14),
-        .sync_lane_15(sync_lane_15)
+        .sync_lane_15(sync_lane_15),
+        .descrambled_0(desc_0),
+        .descrambled_1(desc_1),
+        .tx_scr_0_out(to_desc_0),
+        .tx_scr_1_out(to_desc_1),
+        .desc_clk(descrambler_clk)
     );
     
     // Ahora usamos el mismo módulo para descrambling
-//    scrambler x85_descrambler_f0(
-//        .clk(valid),                 // Mismo clock
-//        .rst(rst),                   // Mismo reset
-//        .data_in(flow_0_scrambled),   // Entrada es la salida scrambleada
-//        .data_out(flow_0_recovered),  // Salida debería ser la original
+    scrambler x85_descrambler_f0(
+        .clk(descrambler_clk),                 
+        .rst(rst),                   // Mismo reset
+        .data_in(to_desc_0),   // Entrada es la salida scrambleada
+        .data_out(desc_0)  // Salida debería ser la original
 //        .valid(valid_descrambler)
-//    );
+    );
     
-//    scrambler x85_descrambler_f1(
-//        .clk(valid),                 
-//        .rst(rst),                   
-//        .data_in(flow_1_scrambled),   
-//        .data_out(flow_1_recovered)
-//    );
+    scrambler x85_descrambler_f1(
+        .clk(descrambler_clk),                 
+        .rst(rst),                   
+        .data_in(to_desc_1),   
+        .data_out(desc_1)
+    );
     
 
 endmodule

@@ -142,12 +142,15 @@ module aui_checker #(
     // Buffers para almacenar tx_scrambled en bloques
     logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_0 [NUM_BLOCKS - 1 : 0];
     logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_1 [NUM_BLOCKS - 1 : 0];
+    logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_0_wo_am [NUM_BLOCKS - 1 - 4: 0];
+    logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_1_wo_am [NUM_BLOCKS - 1 - 4: 0];
     
     // Mensaje original decodificado
     logic [BITS_BLOCK - 1 : 0           ] input_decoded [NUM_BLOCKS*2 - 1 : 0]; // 257 bits
     
     // Flag para verificar que hay data para desescramblear
     logic data_present;
+    logic [1:0] desc_clk_started; // pequeño delay
     
     // Index para la posicion a mandar a desescramblear
     logic descr_index;
@@ -160,6 +163,10 @@ module aui_checker #(
     
     // Clock para descrambler (mitad de frecuencia de clk)
     logic descrambler_clk;
+    
+    // Arreglos recibidos luego de descranmblear
+    logic [BITS_BLOCK - 1 : 0           ] array_flow_0 [NUM_BLOCKS - 1 : 0];
+    logic [BITS_BLOCK - 1 : 0           ] array_flow_1 [NUM_BLOCKS - 1 : 0];
     
     
 
@@ -317,32 +324,61 @@ module aui_checker #(
         // varias posiciones de 257 bits cada uno. Los primeros 257 son de tx_scrambled_0_wo_am y van al 
         // primer lugar del arreglo, los próximos son de tx_scrambled_1_wo_am y van al segundo lugar, y así
         // sucesivamente hasta que se llenen todas las posiciones del arreglo. El arreglo es input_decoded
-
-        for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
-            int start_f0 = (i + 1) * BITS_BLOCK - 2;    // Ajustamos posición de inicio, debe correrse 1 bit más
-            int start_f1 = (i + 1) * BITS_BLOCK - 2;
+        
+        // Si vienen AMs, almaceno 36, sino 40
+        if(sync_lanes[0]) begin
+            for (int i = 0; i < (NUM_BLOCKS - 4); i = i + 1) begin
+                int start_f0 = (i + 5) * BITS_BLOCK - 2;    // Ajustamos posición de inicio, debe correrse 1 bit más
+                int start_f1 = (i + 5) * BITS_BLOCK - 2;
+                array_tx_scr_0_wo_am[i] = tx_scrambled_0[start_f0 -: BITS_BLOCK];
+                array_tx_scr_1_wo_am[i] = tx_scrambled_1[start_f1 -: BITS_BLOCK];
+            end
+        end
+        // Almaceno 40 porque no vienen AMs
+        else begin
+            for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
+                int start_f0 = (i + 1) * BITS_BLOCK - 2;    // Ajustamos posición de inicio, debe correrse 1 bit más
+                int start_f1 = (i + 1) * BITS_BLOCK - 2;
+                array_tx_scr_0[i] = tx_scrambled_0[start_f0 -: BITS_BLOCK];
+                array_tx_scr_1[i] = tx_scrambled_1[start_f1 -: BITS_BLOCK];
+            end
+        end
+        
         
             //input_decoded[2*i]     = tx_scrambled_0_wo_am[start_f0 -: BITS_BLOCK]; // Extrae de flow_0 en orden descendente
             //input_decoded[2*i + 1] = tx_scrambled_1_wo_am[start_f1 -: BITS_BLOCK]; // Extrae de flow_1 en orden descendente
 //            input_decoded[2*i]     = tx_scrambled_0[start_f0 -: BITS_BLOCK]; // Extrae de flow_0 en orden descendente
 //            input_decoded[2*i + 1] = tx_scrambled_1[start_f1 -: BITS_BLOCK]; // Extrae de flow_1 en orden descendente
-            array_tx_scr_0[i] = tx_scrambled_0[start_f0 -: BITS_BLOCK];
-            array_tx_scr_1[i] = tx_scrambled_1[start_f0 -: BITS_BLOCK];
+//            array_tx_scr_0[i] = tx_scrambled_0[start_f0 -: BITS_BLOCK];
+//            array_tx_scr_1[i] = tx_scrambled_1[start_f0 -: BITS_BLOCK];
         
             // Depuración para verificar la extracción
 //            $display("Decoded[%0d] = %h", 2*i, input_decoded[2*i]);
 //            $display("Decoded[%0d] = %h", 2*i+1, input_decoded[2*i+1]);
-        end
+        
         
         // Verifico que sean todos distintos de 0 
-        data_present = 1'b0;  // Inicializamos en 0
+        if (!rst) begin
+            data_present = 0;  // Inicializamos en 0
+        end
         
         for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
-            if (array_tx_scr_0[i] != 0) begin
-                data_present = 1'b1; // Encontramos un dato distinto de 0
-                break; // Salimos del for
+            if(sync_lanes[0]) begin
+                if (array_tx_scr_0_wo_am[i] != 0) begin
+                    data_present = 1; // Encontramos un dato distinto de 0
+                    break; // Salimos del for
+                end
             end
+            else begin
+                if (array_tx_scr_0[i] != 0) begin
+                    data_present = 1; // Encontramos un dato distinto de 0
+                    break; // Salimos del for
+                end
+            end
+            
         end
+        
+        // REVISAR ESTE FOR DE ARRIBA PARA MANEJAR BIEN LA FLAG DATA PRESENT CUANDO NO VIENEN AMS
         
     end
         
@@ -370,6 +406,8 @@ module aui_checker #(
             data_present <= 1'b0; // Sin data presente
             descr_index <= 1'b0; // Index en 0
             descrambler_clk <= 0; // Clock descrambler en 0
+            desc_clk_started <= 0; // Pequeño delay en 0
+
         end else begin
         
             // Si los lanes no están mapeados, comienzo a detectarlos
@@ -399,26 +437,66 @@ module aui_checker #(
                 end
             end
             
+            
+            
             // Preparar las salidas para el descrambler
             
-            descrambler_clk <= ~descrambler_clk; // Toggle cada ciclo de clk
-            
-            if (data_present) begin // Verifico que hayan datos
-                if (descr_index < NUM_BLOCKS && descrambler_clk) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
-                    to_descr_0 <= array_tx_scr_0[descr_index];
-                    to_descr_1 <= array_tx_scr_1[descr_index];
-                    // FALTA IMPLEMENTAR LA PARTE PARA ALMACENAR LO QUE ENTRA DEL DESCRAMBLER
-                    descr_index <= descr_index + 1;
+            if (data_present) begin
+                if (desc_clk_started) begin
+                    descrambler_clk <= ~descrambler_clk; // Toggle cada ciclo de clk
+                end else begin
+                    desc_clk_started <= 1; // Pequeño delay
                 end
-                else if (descr_index < NUM_BLOCKS) begin // Si solo son los NUM_BLOCKS
+            end
+            
+            // Si vienen AMs, almaceno en registros de 36 posiciones
+            if(sync_lanes[0]) begin
+                if (data_present) begin // Verifico que hayan datos
+                    if (descr_index < (NUM_BLOCKS - 4) && !descrambler_clk && desc_clk_started) begin // descrambler_clk) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
+                        to_descr_0 <= array_tx_scr_0_wo_am[descr_index];
+                        to_descr_1 <= array_tx_scr_1_wo_am[descr_index];
+                        // FALTA IMPLEMENTAR LA PARTE PARA ALMACENAR LO QUE ENTRA DEL DESCRAMBLER
+                        array_flow_0[descr_index] <= flow_0_des;
+                        array_flow_1[descr_index] <= flow_1_des;    // TENER EN CUENTA PARA VOLVER A JUNTAR LOS DATOS, HAY QUE IGNORAR 4 POSICIONES PORQUE SE SUPRIMIERON LOS AMs
+                        descr_index <= descr_index + 1;
+                    end
+                    else if (descr_index >= (NUM_BLOCKS - 4)) begin // Si solo son los NUM_BLOCKS
+                        descr_index <= 0;
+                    end
+                end
+                else begin
+                    to_descr_0 <= 0;
+                    to_descr_1 <= 0;
                     descr_index <= 0;
                 end
             end
+            
+            
+            
+            // Si no vienen AMs, almaceno en registros de 40 posiciones
             else begin
-                to_descr_0 <= 0;
-                to_descr_1 <= 0;
-                descr_index <= 0;
+                if (data_present) begin // Verifico que hayan datos
+                    if (descr_index < NUM_BLOCKS) begin //  && descrambler_clk) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
+                        to_descr_0 <= array_tx_scr_0[descr_index];
+                        to_descr_1 <= array_tx_scr_1[descr_index];
+                        // FALTA IMPLEMENTAR LA PARTE PARA ALMACENAR LO QUE ENTRA DEL DESCRAMBLER
+                        array_flow_0[descr_index] <= flow_0_des;
+                        array_flow_1[descr_index] <= flow_1_des;
+                        descr_index <= descr_index + 1;
+                    end
+                    else if (descr_index >= NUM_BLOCKS) begin // Si solo son los NUM_BLOCKS
+                        descr_index <= 0;
+                    end
+                end
+                else begin
+                    to_descr_0 <= 0;
+                    to_descr_1 <= 0;
+                    descr_index <= 0;
+                end
             end
+            
+            
+            // REVISAR QUE EL VALID DEL DESCRAMBLER ME INDICA QUE EL NUEVO DATO YA ESTÁ LISTO
             
             // Hay que revisar que no traigan AMs, los AMs no vienen scrambleados
 
