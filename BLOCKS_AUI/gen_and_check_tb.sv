@@ -217,5 +217,22 @@ aui_checker #(
         .sync_lane_14(sync_lane_14),
         .sync_lane_15(sync_lane_15)
     );
+    
+    // Ahora usamos el mismo módulo para descrambling
+//    scrambler x85_descrambler_f0(
+//        .clk(valid),                 // Mismo clock
+//        .rst(rst),                   // Mismo reset
+//        .data_in(flow_0_scrambled),   // Entrada es la salida scrambleada
+//        .data_out(flow_0_recovered),  // Salida debería ser la original
+//        .valid(valid_descrambler)
+//    );
+    
+//    scrambler x85_descrambler_f1(
+//        .clk(valid),                 
+//        .rst(rst),                   
+//        .data_in(flow_1_scrambled),   
+//        .data_out(flow_1_recovered)
+//    );
+    
 
 endmodule
