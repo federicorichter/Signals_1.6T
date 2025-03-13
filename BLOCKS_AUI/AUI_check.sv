@@ -153,7 +153,7 @@ module aui_checker #(
     logic [1:0] desc_clk_started; // pequeño delay
     
     // Index para la posicion a mandar a desescramblear
-    logic descr_index;
+    logic [NUM_BLOCKS -1: 0]descr_index;
     
     // Auxiliares para asignar a salidas a descramblear
     logic [BITS_BLOCK - 1 : 0] to_descr_0;
@@ -163,6 +163,8 @@ module aui_checker #(
     
     // Clock para descrambler (mitad de frecuencia de clk)
     logic descrambler_clk;
+    logic desc_clk_aux;
+    logic flag_clk_aux;
     
     // Arreglos recibidos luego de descranmblear
     logic [BITS_BLOCK - 1 : 0           ] array_flow_0 [NUM_BLOCKS - 1 : 0];
@@ -212,7 +214,7 @@ module aui_checker #(
     assign tx_scr_0_out = to_descr_0; // Salidas a desescramblear
     assign tx_scr_1_out = to_descr_1;
     assign desc_clk = descrambler_clk; // Clock para el descrambler
-    
+    //assign desc_clk = flag_clk_aux;
 
 
     always_comb begin
@@ -358,9 +360,9 @@ module aui_checker #(
         
         
         // Verifico que sean todos distintos de 0 
-        if (!rst) begin
-            data_present = 0;  // Inicializamos en 0
-        end
+        //if (!rst) begin
+        //    data_present = 0;  // Inicializamos en 0
+        //end
         
         for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
             if(sync_lanes[0]) begin
@@ -382,7 +384,18 @@ module aui_checker #(
         
     end
         
-       
+    // Clock para sincronizar bien el descrambler
+//    always_ff @(negedge clk or posedge rst) begin
+//        if (rst) begin
+//            desc_clk_aux <= 0;
+//            flag_clk_aux <= 0;
+//        end
+//        else begin
+//        desc_clk_aux <= ~clk;
+//        flag_clk_aux <= descrambler_clk;
+//        end
+        
+//    end
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -407,6 +420,8 @@ module aui_checker #(
             descr_index <= 1'b0; // Index en 0
             descrambler_clk <= 0; // Clock descrambler en 0
             desc_clk_started <= 0; // Pequeño delay en 0
+            //desc_clk_aux <= 0; // Auxiliar de clk en 0
+            //flag_clk_aux <= 0;
 
         end else begin
         
@@ -444,24 +459,38 @@ module aui_checker #(
             if (data_present) begin
                 if (desc_clk_started) begin
                     descrambler_clk <= ~descrambler_clk; // Toggle cada ciclo de clk
+                    //flag_clk_aux <= 1;
                 end else begin
                     desc_clk_started <= 1; // Pequeño delay
                 end
+                //if (flag_clk_aux) begin
+                    //desc_clk_aux <= ~desc_clk_aux;
+                //end
             end
+            
+            //desc_clk_aux <= ~clk;
             
             // Si vienen AMs, almaceno en registros de 36 posiciones
             if(sync_lanes[0]) begin
-                if (data_present) begin // Verifico que hayan datos
-                    if (descr_index < (NUM_BLOCKS - 4) && !descrambler_clk && desc_clk_started) begin // descrambler_clk) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
+                if (data_present) begin // Verifico que hayan datos distintos de 0
+                    if (descr_index < (NUM_BLOCKS - 4) && !descrambler_clk && desc_clk_started) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
                         to_descr_0 <= array_tx_scr_0_wo_am[descr_index];
                         to_descr_1 <= array_tx_scr_1_wo_am[descr_index];
                         // FALTA IMPLEMENTAR LA PARTE PARA ALMACENAR LO QUE ENTRA DEL DESCRAMBLER
                         array_flow_0[descr_index] <= flow_0_des;
                         array_flow_1[descr_index] <= flow_1_des;    // TENER EN CUENTA PARA VOLVER A JUNTAR LOS DATOS, HAY QUE IGNORAR 4 POSICIONES PORQUE SE SUPRIMIERON LOS AMs
                         descr_index <= descr_index + 1;
+                        // Agregar flag de que opera con AMs, entonces despues llena un array con NUM_BLOCKS - 4 posiciones, mas comodo para el proceso del LFSR y el posterior lock
                     end
                     else if (descr_index >= (NUM_BLOCKS - 4)) begin // Si solo son los NUM_BLOCKS
-                        descr_index <= 0;
+                        descr_index <= 0; // Reinicio el index
+                        // Reiniciar los arreglos a 0
+                        for (int i = 0; i < (NUM_BLOCKS - 4); i = i + 1) begin
+                            array_tx_scr_0_wo_am[i] <= 0;
+                            array_tx_scr_1_wo_am[i] <= 0;
+                        end
+                        data_present <= 0; // Reinicio la flag para detener el clock
+                        // Agregar flag de que terminó de leer
                     end
                 end
                 else begin
@@ -476,7 +505,7 @@ module aui_checker #(
             // Si no vienen AMs, almaceno en registros de 40 posiciones
             else begin
                 if (data_present) begin // Verifico que hayan datos
-                    if (descr_index < NUM_BLOCKS) begin //  && descrambler_clk) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
+                    if (descr_index < NUM_BLOCKS && !descrambler_clk && desc_clk_started) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
                         to_descr_0 <= array_tx_scr_0[descr_index];
                         to_descr_1 <= array_tx_scr_1[descr_index];
                         // FALTA IMPLEMENTAR LA PARTE PARA ALMACENAR LO QUE ENTRA DEL DESCRAMBLER
@@ -486,6 +515,13 @@ module aui_checker #(
                     end
                     else if (descr_index >= NUM_BLOCKS) begin // Si solo son los NUM_BLOCKS
                         descr_index <= 0;
+                        // Reiniciar los arreglos a 0
+                        for (int i = 0; i < (NUM_BLOCKS - 4); i = i + 1) begin
+                            array_tx_scr_0[i] <= 0;
+                            array_tx_scr_1[i] <= 0;
+                        end
+                        data_present <= 0; // Reinicio la flag para detener el clock
+                        // Agregar flag de que terminó de leer
                     end
                 end
                 else begin
