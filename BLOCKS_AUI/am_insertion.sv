@@ -27,6 +27,14 @@ module am_insertion #(
     reg option = 0;
     integer counter_blocks; // checks buffer overflow
     integer counter_am;     // checks wether we should insert AM or not
+    
+    
+    logic [256:0] flow_0_buffer;
+    logic [256:0] flow_1_buffer;    // Buffers para almacenar el valor cuando counter_blocks es 40
+    logic store_pending;
+
+
+
 
     function automatic logic [7:0] reverse_octet(input logic [7:0] octet);
         logic [7:0] result;
@@ -127,6 +135,10 @@ module am_insertion #(
     endgenerate
 
     always_ff @(posedge clk) begin
+    
+                
+                $display("[%0t] tx_scrambled_f0_next = %h", $time, tx_scrambled_f0_next);
+                $display("[%0t] tx_scrambled_f1_next = %h", $time, tx_scrambled_f1_next);
         valid_signal <= 0;
         if (rst) begin
             counter_blocks <= 4; // we already start with AM
@@ -139,6 +151,7 @@ module am_insertion #(
             tx_scrambled_f1_next[10279:1028] <= {9251{1'd0}};
             counter_am <= 4;
             valid_signal <= 0;
+            store_pending <= 0;
         end else if(i_valid) begin
             valid_signal <= 0;
             
@@ -160,6 +173,11 @@ module am_insertion #(
             if(counter_am < 327680 ) begin  
                 counter_am <= counter_am + 1;
                 if(counter_blocks < 40 ) begin
+                    if (store_pending) begin
+                        tx_scrambled_f0_next[0 +: 257] <= flow_0_buffer;    // Agrego valor perdido
+                        tx_scrambled_f1_next[0 +: 257] <= flow_1_buffer;
+                        store_pending <= 0;
+                    end
                     counter_blocks <= counter_blocks + 1;
                     tx_scrambled_f0_next[((counter_blocks * 257) - 1) +: 257] <= flow_0;
                     tx_scrambled_f1_next[((counter_blocks * 257) - 1) +: 257] <= flow_1;
@@ -169,6 +187,9 @@ module am_insertion #(
                     tx_scrambled_f0 <= tx_scrambled_f0_next;
                     tx_scrambled_f1 <= tx_scrambled_f1_next;
                     valid_signal <= 1;
+                    flow_0_buffer <= flow_0;
+                    flow_1_buffer <= flow_1;
+                    store_pending <= 1;
                 end
             end
             
