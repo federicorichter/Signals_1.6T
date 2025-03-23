@@ -225,6 +225,9 @@ module aui_checker #(
     assign desc_clk = descrambler_clk; // Clock para el descrambler
     //assign desc_clk = flag_clk_aux;
 
+    logic [BITS_BLOCK:0] aux_flow_0;
+    logic [BITS_BLOCK:0] aux_flow_1;
+
 
     always_comb begin
         
@@ -332,6 +335,7 @@ module aui_checker #(
         tx_scrambled_1_wo_am = tx_scrambled_1[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH];
         am_mapped_0          = tx_scrambled_0[AM_MAPPED_WIDTH  - 1  :                 0];
         am_mapped_1          = tx_scrambled_1[AM_MAPPED_WIDTH  - 1  :                 0];
+        
 
 
 
@@ -364,33 +368,6 @@ module aui_checker #(
             end
         end
         
-        //for (int i = 0; i < 4; i = i + 1) begin 
-        //    int aux_f0 = (((i+1)* BITS_BLOCK - 2) * 4);
-        //    array_aux [i] = tx_scrambled_0[aux_f0 -: (BITS_BLOCK*4)];
-            
-        //end
-        
-        
-            //input_decoded[2*i]     = tx_scrambled_0_wo_am[start_f0 -: BITS_BLOCK]; // Extrae de flow_0 en orden descendente
-            //input_decoded[2*i + 1] = tx_scrambled_1_wo_am[start_f1 -: BITS_BLOCK]; // Extrae de flow_1 en orden descendente
-//            input_decoded[2*i]     = tx_scrambled_0[start_f0 -: BITS_BLOCK]; // Extrae de flow_0 en orden descendente
-//            input_decoded[2*i + 1] = tx_scrambled_1[start_f1 -: BITS_BLOCK]; // Extrae de flow_1 en orden descendente
-//            array_tx_scr_0[i] = tx_scrambled_0[start_f0 -: BITS_BLOCK];
-//            array_tx_scr_1[i] = tx_scrambled_1[start_f0 -: BITS_BLOCK];
-        
-            // Depuración para verificar la extracción
-//            $display("Decoded[%0d] = %h", 2*i, input_decoded[2*i]);
-//            $display("Decoded[%0d] = %h", 2*i+1, input_decoded[2*i+1]);
-        
-        
-        // Verifico que sean todos distintos de 0 
-        //if (!rst) begin
-        //    data_present = 0;  // Inicializamos en 0
-        //end
-        
-        
-        
-        
         for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
             if(sync_lanes[0]) begin         // Por lo menos checkeo con lane 0
                 if (array_tx_scr_0_wo_am[i] != 0) begin // Si en alguno vino algo distinto de todo 0
@@ -409,22 +386,8 @@ module aui_checker #(
         end
         
         // REVISAR ESTE FOR DE ARRIBA PARA MANEJAR BIEN LA FLAG DATA PRESENT CUANDO NO VIENEN AMS        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+              
     end
-     
-     
-     
-     
      
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -453,6 +416,8 @@ module aui_checker #(
             array_ready <= 0;
             decoded_clk <= 0;
             decoded_aux <= 0;
+            aux_flow_0 <= 0;
+            aux_flow_1 <= 0;
 
         end else begin
         
@@ -484,12 +449,6 @@ module aui_checker #(
                     cycle_counter[i] <= cycle_counter[i] + 1'b1;
                 end
             end
-            
-            
-            
-
-            
-            
             
             // Preparar las salidas para el descrambler
             
@@ -567,14 +526,9 @@ module aui_checker #(
                     descr_index <= 0;
                 end
             end
-            
-            
-            // REVISAR QUE EL VALID DEL DESCRAMBLER ME INDICA QUE EL NUEVO DATO YA ESTÁ LISTO
-            
-            // Hay que revisar que no traigan AMs, los AMs no vienen scrambleados
-            
-            
+                
             decoded_clk <= ~decoded_clk;
+            
             
             
             if (data_present) begin
@@ -585,10 +539,14 @@ module aui_checker #(
                 if(!data_present) begin
                     decoded_aux <= 0;
                 end
-                if (decoded_clk) begin
+                if (decoded_clk && (aux_flow_0 != flow_1_des && aux_flow_1 != flow_1_des)) begin
                     input_decoded <= flow_1_des;
+                    aux_flow_1 <= flow_1_des;
                 end else begin
-                    input_decoded <= flow_0_des;
+                    if (aux_flow_0 != flow_0_des && aux_flow_1 != flow_0_des) begin
+                        input_decoded <= flow_0_des;
+                        aux_flow_0 <= flow_0_des;
+                    end
                 end
             end
             
