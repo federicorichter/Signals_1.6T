@@ -168,7 +168,9 @@ module aui_checker #(
     logic [BITS_BLOCK - 1 : 0] to_descr_0;
     logic [BITS_BLOCK - 1 : 0] to_descr_1;
     logic [BITS_BLOCK - 1 : 0] flow_0_des;
+    logic [BITS_BLOCK - 1 : 0] flow_0_des_old;
     logic [BITS_BLOCK - 1 : 0] flow_1_des;
+    logic [BITS_BLOCK - 1 : 0] flow_1_des_old;
     
     // Clock para descrambler (mitad de frecuencia de clk)
     logic descrambler_clk;
@@ -230,6 +232,8 @@ module aui_checker #(
     logic [BITS_BLOCK:0] aux_flow_1;
 
     logic [BITS_BLOCK:0] input_decoded;
+
+    logic input_decoded_source;
 
 
     always_comb begin
@@ -422,6 +426,7 @@ module aui_checker #(
             aux_flow_0 <= 0;
             aux_flow_1 <= 0;
             input_decoded_old <= 0;
+            input_decoded_source <= 0;
 
         end else begin
         
@@ -531,25 +536,27 @@ module aui_checker #(
                 end
             end
                 
-            decoded_clk <= ~decoded_clk;
+            //decoded_clk <= ~decoded_clk;
             
             input_decoded_old <= input_decoded;
-            
+
             if (data_present) begin
                 decoded_aux <= 1;
             end
             
             if (data_present || decoded_aux) begin
-                if(!data_present) begin
+                if (!data_present) begin
                     decoded_aux <= 0;
                 end
-                if (decoded_clk && (aux_flow_0 != flow_1_des && aux_flow_1 != flow_1_des)) begin
-                    input_decoded <= flow_1_des;
-                    aux_flow_1 <= flow_1_des;
-                end else begin
-                    if (aux_flow_0 != flow_0_des && aux_flow_1 != flow_0_des) begin
+                if (decoded_clk) begin
+                    if (aux_flow_0 != flow_0_des) begin
                         input_decoded <= flow_0_des;
                         aux_flow_0 <= flow_0_des;
+                        input_decoded_source <= 1'b0; // Indica que la última asignación provino de flow_0_des
+                    end else if (aux_flow_1 != flow_1_des && aux_flow_0 == flow_0_des) begin
+                        input_decoded <= flow_1_des;
+                        aux_flow_1 <= flow_1_des;
+                        input_decoded_source <= 1'b1; // Indica que la última asignación provino de flow_1_des
                     end
                 end
             end
@@ -572,6 +579,15 @@ module aui_checker #(
             
             o_block_to_check <= 0;
         
+        end
+    end
+
+    always_ff @(posedge clk or negedge clk) begin
+        if ( flow_0_des != flow_1_des) begin
+            decoded_clk <= ~decoded_clk;
+        end
+        if (flow_0_des == flow_0_des_old && flow_1_des == flow_1_des_old) begin
+            decoded_clk <= 0;
         end
     end
 

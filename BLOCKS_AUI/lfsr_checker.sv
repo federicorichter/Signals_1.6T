@@ -1,7 +1,7 @@
 module lfsr_257_checker #(
     parameter BLOCK_SIZE = 257,
-    parameter LOCK_THRESHOLD = 8,
-    parameter UNLOCK_THRESHOLD = 3
+    parameter LOCK_THRESHOLD = 5,
+    parameter UNLOCK_THRESHOLD = 5
 )(
     input  logic                   rst,
     input  logic                   i_valid,
