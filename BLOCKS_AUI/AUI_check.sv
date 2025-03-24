@@ -44,7 +44,9 @@ module aui_checker #(
     input logic  [BITS_BLOCK-1 : 0] descrambled_1,
     output logic [BITS_BLOCK-1 : 0] tx_scr_0_out,   // Salida escrambleada
     output logic [BITS_BLOCK-1 : 0] tx_scr_1_out,
-    output logic desc_clk    // Clock para el descrambler
+    output logic [BITS_BLOCK-1 : 0] input_decoded_old,
+    output logic desc_clk,    // Clock para el descrambler
+    output logic o_block_to_check //
 );
 
 
@@ -152,7 +154,6 @@ module aui_checker #(
     
     
     // Mensaje original decodificado
-    logic [BITS_BLOCK - 1 : 0           ] input_decoded; // 257 bits
     logic                                 decoded_clk;
     logic                                 decoded_aux;
     
@@ -227,6 +228,8 @@ module aui_checker #(
 
     logic [BITS_BLOCK:0] aux_flow_0;
     logic [BITS_BLOCK:0] aux_flow_1;
+
+    logic [BITS_BLOCK:0] input_decoded;
 
 
     always_comb begin
@@ -418,6 +421,7 @@ module aui_checker #(
             decoded_aux <= 0;
             aux_flow_0 <= 0;
             aux_flow_1 <= 0;
+            input_decoded_old <= 0;
 
         end else begin
         
@@ -529,7 +533,7 @@ module aui_checker #(
                 
             decoded_clk <= ~decoded_clk;
             
-            
+            input_decoded_old <= input_decoded;
             
             if (data_present) begin
                 decoded_aux <= 1;
@@ -551,7 +555,28 @@ module aui_checker #(
             end
             
 
-        end 
+        end     
+
+
     end
+    
+    always_ff @(posedge clk or negedge clk) begin
+        
+        if (clk) begin
+            
+            if (input_decoded != input_decoded_old) begin
+                o_block_to_check <= 1;
+            end
+
+        end else begin // Flanco de bajada
+            
+            o_block_to_check <= 0;
+        
+        end
+    end
+
+
+
+
 
 endmodule

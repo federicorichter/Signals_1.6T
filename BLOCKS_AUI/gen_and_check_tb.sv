@@ -23,6 +23,7 @@ wire sync_lane_0, sync_lane_1, sync_lane_2, sync_lane_3, sync_lane_4,
      
 wire [BITS_BLOCK-1 : 0] to_desc_0, to_desc_1, desc_0, desc_1;
 wire descrambler_clk;
+wire lock;
  
 
 initial begin
@@ -75,29 +76,7 @@ flow_distributor_r flow_distributor_real (
 reg [BITS_BLOCK-1:0] gen_test_scrambler;
 wire [BITS_BLOCK-1:0] flow_0_scrambled, flow_1_scrambled, test_scrambler_i, test_scrambler_o;
 wire valid_scrambler, valid_scrambler_1;
-/*
-lfsr_scramble  #(
-    .DATA_WIDTH(BITS_BLOCK)
-)
-test_scrambler(
-    .clk(clk),
-    .rst(rst),
-    .data_in(gen_test_scrambler),
-    .data_out(test_scrambler_i),
-    //.valid(valid_scrambler_1)
-    .data_in_valid(clk)
-);
 
-lfsr_scramble #(
-    .DATA_WIDTH(BITS_BLOCK)
-    ) descrambler
-    (
-    .clk(clk),
-    .rst(rst),
-    .data_in(test_scrambler_i),
-    .data_out(test_scrambler_o),
-    .data_in_valid(clk)
-);*/
 
 scrambler x85_scrambler_f0(
     .clk(valid),
@@ -181,6 +160,9 @@ lanes lanes_output(
     
 );
 
+wire o_block_to_check;
+wire [BITS_BLOCK-1:0] input_decoded;
+
 aui_checker #(
         .LANE_WIDTH(LANE_WIDTH),
         .BITS_BLOCK(BITS_BLOCK)
@@ -223,7 +205,9 @@ aui_checker #(
         .descrambled_1(desc_1),
         .tx_scr_0_out(to_desc_0),
         .tx_scr_1_out(to_desc_1),
-        .desc_clk(descrambler_clk)
+        .desc_clk(descrambler_clk),
+        .o_block_to_check(o_block_to_check),
+        .input_decoded_old(input_decoded)
     );
     
     // Ahora usamos el mismo módulo para descrambling
@@ -241,6 +225,15 @@ aui_checker #(
         .data_in(to_desc_1),   
         .data_out(desc_1)
     );
+
+    lfsr_257_checker lfsr_checker(
+        .rst(rst),
+        .i_valid(o_block_to_check),
+        .i_data(input_decoded),
+        .o_lock(lock)
+    );
+
+
     
 
 endmodule
