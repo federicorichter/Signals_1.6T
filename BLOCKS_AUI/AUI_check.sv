@@ -38,7 +38,13 @@ module aui_checker #(
     input logic [LANE_WIDTH-1:0] i_lane_14,
     input logic sync_lane_14,
     input logic [LANE_WIDTH-1:0] i_lane_15,
-    input logic sync_lane_15
+    input logic sync_lane_15,
+    
+    input logic  [BITS_BLOCK-1 : 0] descrambled_0,  // Entrada desescrambleada del flujo 0
+    input logic  [BITS_BLOCK-1 : 0] descrambled_1,
+    output logic [BITS_BLOCK-1 : 0] tx_scr_0_out,   // Salida escrambleada
+    output logic [BITS_BLOCK-1 : 0] tx_scr_1_out,
+    output logic desc_clk    // Clock para el descrambler
 );
 
 
@@ -57,7 +63,7 @@ module aui_checker #(
     localparam BLOCK_W_AM_WIDTH = CODEWORD_WIDTH_WO_FEC * 2;        // 5140 * 2 = 10280
     localparam AM_MAPPED_WIDTH = 1028;
     localparam BLOCK_WO_AM_WIDTH = BLOCK_W_AM_WIDTH - AM_MAPPED_WIDTH; // 10280 - 1028 = 9220
-    localparam NUM_BLOCKS = 36; // Bloques con data util
+    localparam NUM_BLOCKS = 40; // Bloques con data util
 
 
     // AMs ya invertidos para comparar directamente con los que ingresan
@@ -132,9 +138,48 @@ module aui_checker #(
     // AM mapped
     logic [AM_MAPPED_WIDTH       - 1 : 0] am_mapped_0;
     logic [AM_MAPPED_WIDTH       - 1 : 0] am_mapped_1;
-
+    
+    // Buffers para almacenar tx_scrambled en bloques
+    logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_0 [NUM_BLOCKS - 1 : 0];
+    logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_1 [NUM_BLOCKS - 1 : 0];
+    logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_0_wo_am [NUM_BLOCKS - 1 - 4: 0];
+    logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_1_wo_am [NUM_BLOCKS - 1 - 4: 0];
+    
+    
+    
+    logic [BITS_BLOCK - 1 : 0           ] copyarray_tx_scr_0 [NUM_BLOCKS - 1 : 0];
+    logic [BITS_BLOCK - 1 : 0           ] copyarray_tx_scr_1 [NUM_BLOCKS - 1 : 0];
+    
+    
     // Mensaje original decodificado
-    logic [BITS_BLOCK - 1 : 0           ] input_decoded [NUM_BLOCKS*2 - 1 : 0]; // 257 bits
+    logic [BITS_BLOCK - 1 : 0           ] input_decoded; // 257 bits
+    logic                                 decoded_clk;
+    logic                                 decoded_aux;
+    
+    // Flag para verificar que hay data para desescramblear
+    logic data_present;
+    logic desc_clk_started; // pequeño delay
+    
+    // Index para la posicion a mandar a desescramblear
+    logic [NUM_BLOCKS -1: 0]descr_index;
+    
+    // Auxiliares para asignar a salidas a descramblear
+    logic [BITS_BLOCK - 1 : 0] to_descr_0;
+    logic [BITS_BLOCK - 1 : 0] to_descr_1;
+    logic [BITS_BLOCK - 1 : 0] flow_0_des;
+    logic [BITS_BLOCK - 1 : 0] flow_1_des;
+    
+    // Clock para descrambler (mitad de frecuencia de clk)
+    logic descrambler_clk;
+    logic flag_clk_aux;
+    
+    logic array_ready;
+    
+    // Arreglos recibidos luego de descranmblear
+    logic [BITS_BLOCK - 1 : 0           ] array_flow_0 [NUM_BLOCKS - 1 : 0];
+    logic [BITS_BLOCK - 1 : 0           ] array_flow_1 [NUM_BLOCKS - 1 : 0];
+    
+    
 
     // Guardamos los valores de AM parametrizado en el registro usado en la comparación
     assign expected_am[AM_LANE[0] ]  = EXPECTED_AM_LANE_0;
@@ -172,6 +217,16 @@ module aui_checker #(
     assign sync_lanes [AM_LANE[14]] = sync_lane_14;
     assign sync_lanes [AM_LANE[15]] = sync_lane_15;
     
+    // 
+    assign flow_0_des = descrambled_0; // Flows 0 y 1 recuperados
+    assign flow_1_des = descrambled_1;
+    assign tx_scr_0_out = to_descr_0; // Salidas a desescramblear
+    assign tx_scr_1_out = to_descr_1;
+    assign desc_clk = descrambler_clk; // Clock para el descrambler
+    //assign desc_clk = flag_clk_aux;
+
+    logic [BITS_BLOCK:0] aux_flow_0;
+    logic [BITS_BLOCK:0] aux_flow_1;
 
 
     always_comb begin
@@ -273,38 +328,74 @@ module aui_checker #(
             tx_scrambled_1[(2* i * ROUND_ROBIN_BITS) + 19 -: ROUND_ROBIN_BITS] = codeword_d_wo_fec[(CODEWORD_WIDTH_WO_FEC / ROUND_ROBIN_BITS - i) * ROUND_ROBIN_BITS - 1 -: ROUND_ROBIN_BITS];
         end
 
+
+
         // Elimina los AM
         tx_scrambled_0_wo_am = tx_scrambled_0[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH]; // Desde el bit 10279 hasta el 9220
         tx_scrambled_1_wo_am = tx_scrambled_1[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH];
         am_mapped_0          = tx_scrambled_0[AM_MAPPED_WIDTH  - 1  :                 0];
         am_mapped_1          = tx_scrambled_1[AM_MAPPED_WIDTH  - 1  :                 0];
+        
+
+
 
         // Armar un for que agarre tx_scrambled_0_wo_am y 1 y junte los datos de ambos en un arreglo de 
         // varias posiciones de 257 bits cada uno. Los primeros 257 son de tx_scrambled_0_wo_am y van al 
         // primer lugar del arreglo, los próximos son de tx_scrambled_1_wo_am y van al segundo lugar, y así
         // sucesivamente hasta que se llenen todas las posiciones del arreglo. El arreglo es input_decoded
-
-        for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
-            int start_f0 = (NUM_BLOCKS - 1 - i) * BITS_BLOCK;
-            int start_f1 = (NUM_BLOCKS - 1 - i) * BITS_BLOCK;
         
-            input_decoded[2*i]     = tx_scrambled_0_wo_am[start_f0 +: BITS_BLOCK]; // Extrae de flow_0
-            input_decoded[2*i + 1] = tx_scrambled_1_wo_am[start_f1 +: BITS_BLOCK]; // Extrae de flow_1
-        
-            // Depuración para verificar la extracción
-            $display("Decoded[%0d] = %h", 2*i, input_decoded[2*i]);
-            $display("Decoded[%0d] = %h", 2*i+1, input_decoded[2*i+1]);
+        // Si vienen AMs, almaceno 36, sino 40
+        if(sync_lanes[0]) begin
+            for (int i = 0; i < (NUM_BLOCKS - 4); i = i + 1) begin
+                int start_f0 = (i + 5) * BITS_BLOCK - 2;    // Ajustamos posición de inicio, debe correrse 1 bit más
+                int start_f1 = (i + 5) * BITS_BLOCK - 2;
+                array_tx_scr_0_wo_am[i] = tx_scrambled_0[start_f0 -: BITS_BLOCK];   // Array preparado evitando los primeros 4 datos con AMs
+                array_tx_scr_1_wo_am[i] = tx_scrambled_1[start_f1 -: BITS_BLOCK];
+            end
         end
-    
+        // Almaceno 40 porque no vienen AMs
+        else begin
+            for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
+                if (i == 0) begin 
+                    array_tx_scr_0[i] = tx_scrambled_0[BITS_BLOCK - 1 : 0]; // Se rompia el primero con el otro método
+                    array_tx_scr_1[i] = tx_scrambled_1[BITS_BLOCK - 1 : 0];
+                end else begin
+                    int start_f0 = (i + 1) * BITS_BLOCK - 2;    // Ajustamos posición de inicio, debe correrse 1 bit más
+                    int start_f1 = (i + 1) * BITS_BLOCK - 2;
+                    array_tx_scr_0[i] = tx_scrambled_0[start_f0 -: BITS_BLOCK];
+                    array_tx_scr_1[i] = tx_scrambled_1[start_f1 -: BITS_BLOCK];
+                end                
+            end
+        end
+        
+        for (int i = 0; i < NUM_BLOCKS; i = i + 1) begin
+            if(sync_lanes[0]) begin         // Por lo menos checkeo con lane 0
+                if (array_tx_scr_0_wo_am[i] != 0) begin // Si en alguno vino algo distinto de todo 0
+                    data_present = 1; // Encontramos un dato distinto de 0
+                    break; // Salimos del for
+                end
+            end
+            
+            else begin  // Si no vino sync lane
+                if (array_tx_scr_0[i] != 0) begin   // Reviso constantemente que haya algo distinto de 0 el arreglo para sin am
+                //if (array_ready) begin
+                    data_present = 1; // Encontramos un dato distinto de 0
+                    break; // Salimos del for
+                end
+            end
+        end
+        
+        // REVISAR ESTE FOR DE ARRIBA PARA MANEJAR BIEN LA FLAG DATA PRESENT CUANDO NO VIENEN AMS        
+              
     end
-
+     
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             // Reiniciar el mapeo de lanes
             mapping_complete <= 0;
-            for (int i = 0; i < NUM_BLOCKS; i++) begin
-                input_decoded[i] <= 0;
-            end
+            
+            input_decoded <= 0;
+           
             for (int i = 0; i < AM_LANES; i++) begin
                 lane_mapping[i] <= 4'h0;
             end
@@ -317,7 +408,20 @@ module aui_checker #(
             has_synced     <= {AM_LANES {1'b0}};     // Inicializar las señales de sincronización en 0
             continue_am_error_flag <= {AM_LANES {1'b0}}; // Inicializar las banderas de error de AM en 0
             lane_locked <= {AM_LANES {1'b0}}; // Inicializar las banderas de bloqueo de lane en 0
+            data_present <= 1'b0; // Sin data presente
+            descr_index <= 1'b0; // Index en 0
+            descrambler_clk <= 0; // Clock descrambler en 0
+            desc_clk_started <= 0; // Pequeño delay en 0
+            //flag_clk_aux <= 0;
+            array_ready <= 0;
+            decoded_clk <= 0;
+            decoded_aux <= 0;
+            aux_flow_0 <= 0;
+            aux_flow_1 <= 0;
+
         end else begin
+        
+        
         
             // Si los lanes no están mapeados, comienzo a detectarlos
             if (!mapping_complete) begin
@@ -345,10 +449,109 @@ module aui_checker #(
                     cycle_counter[i] <= cycle_counter[i] + 1'b1;
                 end
             end
+            
+            // Preparar las salidas para el descrambler
+            
+            if (data_present) begin // Si hay datos para procesar
+                if (desc_clk_started) begin // Si ya salió del reset
+                    descrambler_clk <= ~descrambler_clk; // Toggle cada ciclo de clk
+                    //flag_clk_aux <= 1;
+                end else begin
+                    desc_clk_started <= 1; // Pequeño delay
+                end
+            end
+            
+            
+            // Si vienen AMs, almaceno en registros de 36 posiciones
+            if(sync_lanes[0]) begin
+                if (data_present) begin // Verifico que hayan datos distintos de 0
+                    if (descr_index < (NUM_BLOCKS - 4) && !descrambler_clk && desc_clk_started) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
+                        to_descr_0 <= array_tx_scr_0_wo_am[descr_index]; // Mando a descramblear
+                        to_descr_1 <= array_tx_scr_1_wo_am[descr_index];
+                        //array_flow_0[descr_index] <= flow_0_des;    // Almaceno res
+                        //array_flow_1[descr_index] <= flow_1_des;    // TENER EN CUENTA PARA VOLVER A JUNTAR LOS DATOS, HAY QUE IGNORAR 4 POSICIONES PORQUE SE SUPRIMIERON LOS AMs
+                        
+                        descr_index <= descr_index + 1;
+                        
+                        // Agregar flag de que opera con AMs, entonces despues llena un array con NUM_BLOCKS - 4 posiciones, mas comodo para el proceso del LFSR y el posterior lock
+                    end
+                    else if (descr_index >= (NUM_BLOCKS - 4)) begin // Si solo son los NUM_BLOCKS
+                        descr_index <= 0; // Reinicio el index
+                        // Reiniciar los arreglos a 0
+                        for (int i = 0; i < (NUM_BLOCKS - 4); i = i + 1) begin
+                            array_tx_scr_0_wo_am[i] <= 0;
+                            array_tx_scr_1_wo_am[i] <= 0;
+                        end
+                        array_ready <= 0;
+                        data_present <= 0; // Reinicio la flag para detener el clock
+                        // Agregar flag de que terminó de leer
+                    end
+                end
+                else begin
+                    to_descr_0 <= 0;
+                    to_descr_1 <= 0;
+                    descr_index <= 0;
+                end
+            end
+            
+            
+            
+            // Si no vienen AMs, almaceno en registros de 40 posiciones
+            else begin
+                if (data_present) begin // Verifico que hayan datos
+                    if (descr_index < NUM_BLOCKS && !descrambler_clk && desc_clk_started) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
+                        to_descr_0 <= array_tx_scr_0[descr_index];
+                        to_descr_1 <= array_tx_scr_1[descr_index];
+                        // FALTA IMPLEMENTAR LA PARTE PARA ALMACENAR LO QUE ENTRA DEL DESCRAMBLER
+                        //array_flow_0[descr_index] <= flow_0_des;
+                        //array_flow_1[descr_index] <= flow_1_des;
+                        descr_index <= descr_index + 1;
+                                    
+                    end
+                    else if (descr_index >= NUM_BLOCKS) begin // Si solo son los NUM_BLOCKS
+                        descr_index <= 0;
+                        // Reiniciar los arreglos a 0
+                        for (int i = 0; i < (NUM_BLOCKS - 4); i = i + 1) begin
+                            array_tx_scr_0[i] <= 0;
+                            array_tx_scr_1[i] <= 0;
+                        end
+                        array_ready <= 0;
+                        data_present <= 0; // Reinicio la flag para detener el clock
+                        // Agregar flag de que terminó de leer
+                    end
+                end
+                else begin
+                    to_descr_0 <= 0;
+                    to_descr_1 <= 0;
+                    descr_index <= 0;
+                end
+            end
+                
+            decoded_clk <= ~decoded_clk;
+            
+            
+            
+            if (data_present) begin
+                decoded_aux <= 1;
+            end
+            
+            if (data_present || decoded_aux) begin
+                if(!data_present) begin
+                    decoded_aux <= 0;
+                end
+                if (decoded_clk && (aux_flow_0 != flow_1_des && aux_flow_1 != flow_1_des)) begin
+                    input_decoded <= flow_1_des;
+                    aux_flow_1 <= flow_1_des;
+                end else begin
+                    if (aux_flow_0 != flow_0_des && aux_flow_1 != flow_0_des) begin
+                        input_decoded <= flow_0_des;
+                        aux_flow_0 <= flow_0_des;
+                    end
+                end
+            end
+            
 
-        end
+        end 
     end
-
-
 
 endmodule
