@@ -46,13 +46,11 @@ module aui_checker #(
     output logic [BITS_BLOCK-1 : 0] tx_scr_1_out,
     output logic [BITS_BLOCK-1 : 0] input_decoded_old,
     output logic desc_clk,    // Clock para el descrambler
-    output logic o_block_to_check //
+    output logic o_block_to_check // Clock para el lfsr checker
 );
-
 
     localparam AM_WIDTH = 120; // ancho de los AMs
     localparam AM_LANES = 16; // cantidad de lineas
-    //localparam AM_LANES_WIDTH = $clog2(AM_LANES); // ancho de las lineas
     localparam AM_LANES_WIDTH = 4; // ancho de las lineas
     localparam BYTE_SIZE = 8; 
     localparam TOTAL_CYCLES = 8191; // cantidad de ciclos hasta la aparicion de los AM's
@@ -66,7 +64,6 @@ module aui_checker #(
     localparam AM_MAPPED_WIDTH = 1028;
     localparam BLOCK_WO_AM_WIDTH = BLOCK_W_AM_WIDTH - AM_MAPPED_WIDTH; // 10280 - 1028 = 9220
     localparam NUM_BLOCKS = 40; // Bloques con data util
-
 
     // AMs ya invertidos para comparar directamente con los que ingresan
     localparam [AM_WIDTH - 1 : 0]
@@ -147,11 +144,8 @@ module aui_checker #(
     logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_0_wo_am [NUM_BLOCKS - 1 - 4: 0];
     logic [BITS_BLOCK - 1 : 0           ] array_tx_scr_1_wo_am [NUM_BLOCKS - 1 - 4: 0];
     
-    
-    
     logic [BITS_BLOCK - 1 : 0           ] copyarray_tx_scr_0 [NUM_BLOCKS - 1 : 0];
     logic [BITS_BLOCK - 1 : 0           ] copyarray_tx_scr_1 [NUM_BLOCKS - 1 : 0];
-    
     
     // Mensaje original decodificado
     logic                                 decoded_clk;
@@ -182,8 +176,6 @@ module aui_checker #(
     logic [BITS_BLOCK - 1 : 0           ] array_flow_0 [NUM_BLOCKS - 1 : 0];
     logic [BITS_BLOCK - 1 : 0           ] array_flow_1 [NUM_BLOCKS - 1 : 0];
     
-    
-
     // Guardamos los valores de AM parametrizado en el registro usado en la comparación
     assign expected_am[AM_LANE[0] ]  = EXPECTED_AM_LANE_0;
     assign expected_am[AM_LANE[1] ]  = EXPECTED_AM_LANE_1;
@@ -220,13 +212,11 @@ module aui_checker #(
     assign sync_lanes [AM_LANE[14]] = sync_lane_14;
     assign sync_lanes [AM_LANE[15]] = sync_lane_15;
     
-    // 
     assign flow_0_des = descrambled_0; // Flows 0 y 1 recuperados
     assign flow_1_des = descrambled_1;
     assign tx_scr_0_out = to_descr_0; // Salidas a desescramblear
     assign tx_scr_1_out = to_descr_1;
     assign desc_clk = descrambler_clk; // Clock para el descrambler
-    //assign desc_clk = flag_clk_aux;
 
     logic [BITS_BLOCK:0] aux_flow_0;
     logic [BITS_BLOCK:0] aux_flow_1;
@@ -234,7 +224,6 @@ module aui_checker #(
     logic [BITS_BLOCK:0] input_decoded;
 
     logic input_decoded_source;
-
 
     always_comb begin
         
@@ -254,7 +243,6 @@ module aui_checker #(
             stored_lanes[13] = i_lane_13;
             stored_lanes[14] = i_lane_14;
             stored_lanes[15] = i_lane_15;
-        
         
         // Cargar los valores solo si el sync_lane correspondiente está activo
         // Extraer los últimos 120 bits de cada lane si el sync_lane correspondiente está en 1
@@ -335,17 +323,12 @@ module aui_checker #(
             tx_scrambled_1[(2* i * ROUND_ROBIN_BITS) + 19 -: ROUND_ROBIN_BITS] = codeword_d_wo_fec[(CODEWORD_WIDTH_WO_FEC / ROUND_ROBIN_BITS - i) * ROUND_ROBIN_BITS - 1 -: ROUND_ROBIN_BITS];
         end
 
-
-
         // Elimina los AM
         tx_scrambled_0_wo_am = tx_scrambled_0[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH]; // Desde el bit 10279 hasta el 9220
         tx_scrambled_1_wo_am = tx_scrambled_1[BLOCK_W_AM_WIDTH - 1 -: BLOCK_WO_AM_WIDTH];
         am_mapped_0          = tx_scrambled_0[AM_MAPPED_WIDTH  - 1  :                 0];
         am_mapped_1          = tx_scrambled_1[AM_MAPPED_WIDTH  - 1  :                 0];
         
-
-
-
         // Armar un for que agarre tx_scrambled_0_wo_am y 1 y junte los datos de ambos en un arreglo de 
         // varias posiciones de 257 bits cada uno. Los primeros 257 son de tx_scrambled_0_wo_am y van al 
         // primer lugar del arreglo, los próximos son de tx_scrambled_1_wo_am y van al segundo lugar, y así
@@ -382,18 +365,13 @@ module aui_checker #(
                     break; // Salimos del for
                 end
             end
-            
             else begin  // Si no vino sync lane
                 if (array_tx_scr_0[i] != 0) begin   // Reviso constantemente que haya algo distinto de 0 el arreglo para sin am
-                //if (array_ready) begin
                     data_present = 1; // Encontramos un dato distinto de 0
                     break; // Salimos del for
                 end
             end
-        end
-        
-        // REVISAR ESTE FOR DE ARRIBA PARA MANEJAR BIEN LA FLAG DATA PRESENT CUANDO NO VIENEN AMS        
-              
+        end       
     end
      
     always_ff @(posedge clk or posedge rst) begin
@@ -419,7 +397,6 @@ module aui_checker #(
             descr_index <= 1'b0; // Index en 0
             descrambler_clk <= 0; // Clock descrambler en 0
             desc_clk_started <= 0; // Pequeño delay en 0
-            //flag_clk_aux <= 0;
             array_ready <= 0;
             decoded_clk <= 0;
             decoded_aux <= 0;
@@ -429,8 +406,6 @@ module aui_checker #(
             input_decoded_source <= 0;
 
         end else begin
-        
-        
         
             // Si los lanes no están mapeados, comienzo a detectarlos
             if (!mapping_complete) begin
@@ -445,7 +420,6 @@ module aui_checker #(
             end
             
             // Procesar cada línea de sincronización
-
             for(int i = 0; i <= AM_LANES - 1; i = i + 1'b1) begin
                 if (sync_lanes[i]) begin
                     cycle_gap [i] <= cycle_counter[i];
@@ -460,26 +434,20 @@ module aui_checker #(
             end
             
             // Preparar las salidas para el descrambler
-            
             if (data_present) begin // Si hay datos para procesar
                 if (desc_clk_started) begin // Si ya salió del reset
                     descrambler_clk <= ~descrambler_clk; // Toggle cada ciclo de clk
-                    //flag_clk_aux <= 1;
                 end else begin
                     desc_clk_started <= 1; // Pequeño delay
                 end
             end
-            
             
             // Si vienen AMs, almaceno en registros de 36 posiciones
             if(sync_lanes[0]) begin
                 if (data_present) begin // Verifico que hayan datos distintos de 0
                     if (descr_index < (NUM_BLOCKS - 4) && !descrambler_clk && desc_clk_started) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
                         to_descr_0 <= array_tx_scr_0_wo_am[descr_index]; // Mando a descramblear
-                        to_descr_1 <= array_tx_scr_1_wo_am[descr_index];
-                        //array_flow_0[descr_index] <= flow_0_des;    // Almaceno res
-                        //array_flow_1[descr_index] <= flow_1_des;    // TENER EN CUENTA PARA VOLVER A JUNTAR LOS DATOS, HAY QUE IGNORAR 4 POSICIONES PORQUE SE SUPRIMIERON LOS AMs
-                        
+                        to_descr_1 <= array_tx_scr_1_wo_am[descr_index];                        
                         descr_index <= descr_index + 1;
                         
                         // Agregar flag de que opera con AMs, entonces despues llena un array con NUM_BLOCKS - 4 posiciones, mas comodo para el proceso del LFSR y el posterior lock
@@ -493,7 +461,6 @@ module aui_checker #(
                         end
                         array_ready <= 0;
                         data_present <= 0; // Reinicio la flag para detener el clock
-                        // Agregar flag de que terminó de leer
                     end
                 end
                 else begin
@@ -503,17 +470,12 @@ module aui_checker #(
                 end
             end
             
-            
-            
             // Si no vienen AMs, almaceno en registros de 40 posiciones
             else begin
                 if (data_present) begin // Verifico que hayan datos
                     if (descr_index < NUM_BLOCKS && !descrambler_clk && desc_clk_started) begin // Verifico no haber pasado los NUM_BLOCKS y que el clock sea justo
                         to_descr_0 <= array_tx_scr_0[descr_index];
                         to_descr_1 <= array_tx_scr_1[descr_index];
-                        // FALTA IMPLEMENTAR LA PARTE PARA ALMACENAR LO QUE ENTRA DEL DESCRAMBLER
-                        //array_flow_0[descr_index] <= flow_0_des;
-                        //array_flow_1[descr_index] <= flow_1_des;
                         descr_index <= descr_index + 1;
                                     
                     end
@@ -526,7 +488,6 @@ module aui_checker #(
                         end
                         array_ready <= 0;
                         data_present <= 0; // Reinicio la flag para detener el clock
-                        // Agregar flag de que terminó de leer
                     end
                 end
                 else begin
@@ -536,8 +497,6 @@ module aui_checker #(
                 end
             end
                 
-            //decoded_clk <= ~decoded_clk;
-            
             input_decoded_old <= input_decoded;
 
             if (data_present) begin
@@ -560,11 +519,7 @@ module aui_checker #(
                     end
                 end
             end
-            
-
         end     
-
-
     end
     
     always_ff @(posedge clk or negedge clk) begin
@@ -590,9 +545,5 @@ module aui_checker #(
             decoded_clk <= 0;
         end
     end
-
-
-
-
 
 endmodule
